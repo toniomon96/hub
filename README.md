@@ -34,9 +34,12 @@ pnpm --filter @hub/cli dev -- status
 pnpm --filter @hub/cli dev -- ask "remind me to call Bob"
 ```
 
-Copy `.env.example` to `.env` and fill in. Minimum for MVP: `ANTHROPIC_API_KEY`,
-`NOTION_TOKEN`, `OBSIDIAN_API_KEY` + `OBSIDIAN_VAULT_PATH`,
-`GOOGLE_OAUTH_CLIENT_ID/SECRET`, `HUB_SENSITIVITY_PATTERNS`.
+Copy `.env.example` to `.env` and fill in. **See [SETUP.md](./SETUP.md) for a
+step-by-step setup guide** with every env var, what Hub does with each,
+and personalization knobs for turning this into your assistant.
+
+Minimum for MVP: `ANTHROPIC_API_KEY`, `OBSIDIAN_VAULT_PATH`,
+`HUB_SENSITIVITY_PATTERNS`, `HUB_TIMEZONE`, `HUB_WEBHOOK_SECRET`.
 
 ## Webhooks (Superwhisper, Granola, etc.)
 
