@@ -38,7 +38,7 @@ for (const source of sources) {
     if (!text) return c.json({ error: 'no_text_field' }, 400)
 
     const ref = payload.ref ?? `webhook:${source}:${Date.now()}`
-    const result = ingest({ source, text, rawContentRef: ref })
+    const result = await ingest({ source, text, rawContentRef: ref })
     log.info({ source, captureId: result.id, dup: result.isDuplicate }, 'webhook')
     return c.json(result, 202)
   })

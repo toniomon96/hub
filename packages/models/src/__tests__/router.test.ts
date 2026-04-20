@@ -5,6 +5,7 @@ import { _resetEnvCache } from '@hub/shared'
 const TEST_ENV = {
   ANTHROPIC_API_KEY: 'sk-test',
   HUB_SENSITIVITY_PATTERNS: 'medical|prescription,SSN,bank.*account,wife|kid',
+  HUB_SKIP_DOTENV: '1',
 }
 
 beforeEach(() => {

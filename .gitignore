@@ -35,3 +35,7 @@ Thumbs.db
 # test coverage
 coverage/
 .nyc_output/
+
+data/
+logs/
+.env

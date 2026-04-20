@@ -18,23 +18,22 @@ export interface IngestResult {
 }
 
 /**
- * Idempotent capture ingestion. Dedup by content hash so a webhook
- * retry doesn't create a second row.
- *
- * Classification + dispatch run async after this returns. MVP just stores
- * the raw row; V1 wires the classifier (see classify.ts).
+ * Idempotent capture ingestion. Dedup by content hash so a webhook retry
+ * doesn't create a second row. Async because the underlying driver
+ * (node:sqlite via drizzle-orm/sqlite-proxy) is async-shaped.
  */
-export function ingest(args: IngestArgs): IngestResult {
+export async function ingest(args: IngestArgs): Promise<IngestResult> {
   const db = getDb()
   const hash = contentHash(args.text)
-  const existing = db.select().from(captures).where(eq(captures.contentHash, hash)).get()
+  const existing = await db.select().from(captures).where(eq(captures.contentHash, hash)).get()
   if (existing) {
     log.info({ hash, existingId: existing.id, source: args.source }, 'duplicate capture')
     return { id: existing.id, isDuplicate: true }
   }
 
   const id = newId()
-  db.insert(captures)
+  await db
+    .insert(captures)
     .values({
       id,
       source: args.source,

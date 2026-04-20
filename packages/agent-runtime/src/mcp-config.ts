@@ -33,6 +33,8 @@ export interface McpScopes {
   system: McpServerCfg[]
 }
 
+export type McpScopeName = keyof McpScopes
+
 /**
  * Build the MCP scope map from current env. Skips any server whose required
  * env vars are missing — lets MVP run with just the 3 servers that are wired.

@@ -41,12 +41,12 @@ program
 program
   .command('status')
   .description('Show DB stats, recent runs, and active leases')
-  .action(() => {
+  .action(async () => {
     const db = getDb()
-    const captureCount = db.select({ n: sql<number>`count(*)` }).from(captures).get()?.n ?? 0
-    const runCount = db.select({ n: sql<number>`count(*)` }).from(runs).get()?.n ?? 0
-    const leases = db.select().from(agentLocks).all()
-    const recent = db
+    const captureCount = (await db.select({ n: sql<number>`count(*)` }).from(captures).get())?.n ?? 0
+    const runCount = (await db.select({ n: sql<number>`count(*)` }).from(runs).get())?.n ?? 0
+    const leases = await db.select().from(agentLocks).all()
+    const recent = await db
       .select({
         id: runs.id,
         agent: runs.agentName,
@@ -73,12 +73,21 @@ program
   })
 
 program
+  .command('migrate')
+  .description('Apply pending DB migrations')
+  .action(async () => {
+    const { migrate } = await import('@hub/db/migrate')
+    migrate()
+    console.log(kleur.green('migrations applied'))
+  })
+
+program
   .command('capture <text...>')
   .description('Quick capture from the CLI')
   .action(async (parts: string[]) => {
     const { ingest } = await import('@hub/capture/ingest')
     const text = parts.join(' ')
-    const result = ingest({ source: 'cli', text, rawContentRef: `cli:${Date.now()}` })
+    const result = await ingest({ source: 'cli', text, rawContentRef: `cli:${Date.now()}` })
     console.log(kleur.cyan(result.isDuplicate ? `dup → ${result.id}` : `captured ${result.id}`))
   })
 

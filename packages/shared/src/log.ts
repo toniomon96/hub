@@ -1,5 +1,5 @@
 import pino, { type Logger, type LoggerOptions } from 'pino'
-import { mkdirSync } from 'node:fs'
+import { createWriteStream, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadEnv } from './env.js'
 
@@ -43,12 +43,10 @@ export function getLogger(component?: string): Logger {
 
     rootLogger = pino(
       opts,
-      pino.transport({
-        targets: [
-          { target: 'pino/file', options: { destination: logFile, mkdir: true }, level: env.HUB_LOG_LEVEL },
-          { target: 'pino-pretty', options: { colorize: true, translateTime: 'HH:MM:ss' }, level: env.HUB_LOG_LEVEL },
-        ],
-      }),
+      pino.multistream([
+        { level: env.HUB_LOG_LEVEL, stream: createWriteStream(logFile, { flags: 'a' }) },
+        { level: env.HUB_LOG_LEVEL, stream: process.stderr },
+      ]),
     )
   }
   return component ? rootLogger.child({ component }) : rootLogger

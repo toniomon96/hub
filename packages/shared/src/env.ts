@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { config as loadDotenv } from 'dotenv'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 /**
  * Hub environment schema. Validated once at process startup.
@@ -61,14 +64,37 @@ const EnvSchema = z.object({
 export type Env = z.infer<typeof EnvSchema>
 
 let cached: Env | undefined
+let dotenvLoaded = false
+
+/**
+ * Walk from cwd upward looking for a .env file (so the CLI works from any subdir).
+ * Only runs once per process. Test env can skip by setting HUB_SKIP_DOTENV=1.
+ */
+function ensureDotenv(): void {
+  if (dotenvLoaded) return
+  dotenvLoaded = true
+  if (process.env['HUB_SKIP_DOTENV'] === '1') return
+  let dir = process.cwd()
+  for (let i = 0; i < 6; i++) {
+    const candidate = resolve(dir, '.env')
+    if (existsSync(candidate)) {
+      loadDotenv({ path: candidate })
+      return
+    }
+    const parent = resolve(dir, '..')
+    if (parent === dir) return
+    dir = parent
+  }
+}
 
 /**
  * Load and validate env. Caches after first call.
- * Pass an explicit object for tests; otherwise reads process.env.
+ * Pass an explicit object for tests; otherwise reads process.env (after .env load).
  */
-export function loadEnv(source: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): Env {
+export function loadEnv(source?: NodeJS.ProcessEnv | Record<string, string | undefined>): Env {
   if (cached) return cached
-  const parsed = EnvSchema.safeParse(source)
+  if (!source) ensureDotenv()
+  const parsed = EnvSchema.safeParse(source ?? process.env)
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n')
     throw new Error(`Invalid environment configuration:\n${issues}`)

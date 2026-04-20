@@ -24,10 +24,11 @@ export interface RunFinishArgs {
   reversalPayload?: string
 }
 
-export function startRun(args: RunStartArgs): string {
+export async function startRun(args: RunStartArgs): Promise<string> {
   const db = getDb()
   const id = newId()
-  db.insert(runs)
+  await db
+    .insert(runs)
     .values({
       id,
       agentName: args.agentName,
@@ -44,9 +45,10 @@ export function startRun(args: RunStartArgs): string {
   return id
 }
 
-export function finishRun(runId: string, args: RunFinishArgs): void {
+export async function finishRun(runId: string, args: RunFinishArgs): Promise<void> {
   const db = getDb()
-  db.update(runs)
+  await db
+    .update(runs)
     .set({
       endedAt: Date.now(),
       status: args.status,

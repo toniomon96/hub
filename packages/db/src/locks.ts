@@ -35,18 +35,19 @@ export function tryAcquireLease(agentName: string, opts: LeaseOptions = {}): Lea
   const host = hostname()
 
   // INSERT-or-UPDATE-if-stale. The WHERE predicate prevents stealing live leases.
+  // Positional params for node:sqlite driver compatibility.
   const stmt = db.prepare(`
     INSERT INTO agent_locks (agent_name, pid, acquired_at, lease_until, holder_hostname)
-    VALUES (@name, @pid, @acquired, @until, @host)
+    VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(agent_name) DO UPDATE SET
       pid = excluded.pid,
       acquired_at = excluded.acquired_at,
       lease_until = excluded.lease_until,
       holder_hostname = excluded.holder_hostname
-    WHERE lease_until < @acquired
+    WHERE lease_until < ?
     RETURNING pid, acquired_at, lease_until
   `)
-  const row = stmt.get({ name: agentName, pid, acquired: now, until: leaseUntil, host }) as
+  const row = stmt.get(agentName, pid, now, leaseUntil, host, now) as
     | { pid: number; acquired_at: number; lease_until: number }
     | undefined
 
@@ -71,8 +72,9 @@ export function tryAcquireLease(agentName: string, opts: LeaseOptions = {}): Lea
 export function releaseLease(agentName: string, pid: number): void {
   const db = getRawDb()
   const stmt = db.prepare(`DELETE FROM agent_locks WHERE agent_name = ? AND pid = ?`)
-  const res = stmt.run(agentName, pid)
-  if (res.changes > 0) log.info({ agentName }, 'lease released')
+  const res = stmt.run(agentName, pid) as { changes: number | bigint }
+  const changes = typeof res.changes === 'bigint' ? Number(res.changes) : res.changes
+  if (changes > 0) log.info({ agentName }, 'lease released')
 }
 
 /**
