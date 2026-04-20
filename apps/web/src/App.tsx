@@ -1,9 +1,11 @@
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Dashboard } from './pages/Dashboard.js'
 import { Capture } from './pages/Capture.js'
 import { Ask } from './pages/Ask.js'
 import { Captures } from './pages/Captures.js'
 import { Runs } from './pages/Runs.js'
+import { Login } from './pages/Login.js'
+import { api } from './api.js'
 
 const navItems = [
   { to: '/', label: 'Dashboard' },
@@ -14,6 +16,21 @@ const navItems = [
 ]
 
 export function App() {
+  const location = useLocation()
+  const isLogin = location.pathname.startsWith('/login')
+
+  if (isLogin) {
+    return (
+      <div className="min-h-full flex flex-col">
+        <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-full flex flex-col">
       <header className="border-b border-neutral-800 bg-neutral-900/60 backdrop-blur">
@@ -41,6 +58,12 @@ export function App() {
               </NavLink>
             ))}
           </nav>
+          <button
+            onClick={() => api.logout()}
+            className="ml-auto text-xs text-neutral-500 hover:text-neutral-300"
+          >
+            sign out
+          </button>
         </div>
       </header>
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
@@ -53,7 +76,7 @@ export function App() {
         </Routes>
       </main>
       <footer className="border-t border-neutral-800 text-xs text-neutral-500 py-3 text-center">
-        connected to <span className="font-mono">127.0.0.1</span> - all local
+        connected to <span className="font-mono">{window.location.host}</span>
       </footer>
     </div>
   )
