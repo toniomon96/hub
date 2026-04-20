@@ -1,12 +1,36 @@
 import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { loadEnv, getLogger } from '@hub/shared'
 import { getDb } from '@hub/db'
 import { webhooks } from './webhooks.js'
 import { api } from './api.js'
+import { requireAuth, loginHandler, logoutHandler } from './auth.js'
 
 const log = getLogger('server')
+
+/**
+ * Resolve the built web UI directory. `apps/web/dist` is produced by
+ * `pnpm --filter @hub/web build`. When the server is run from the repo
+ * root (dev) or from `apps/server/dist/` (prod) we walk upward until we
+ * find it. Returns undefined if not built; the server still works, just
+ * without the UI (useful in test/CI).
+ */
+function resolveWebDist(): string | undefined {
+  const here = dirname(fileURLToPath(import.meta.url))
+  const candidates = [
+    resolve(here, '../../web/dist'), // apps/server/dist -> apps/web/dist
+    resolve(here, '../../../apps/web/dist'), // dist nested one more level
+    resolve(process.cwd(), 'apps/web/dist'), // running from repo root
+  ]
+  for (const c of candidates) if (existsSync(c)) return c
+  return undefined
+}
 
 export function buildApp(): Hono {
   const app = new Hono()
@@ -22,7 +46,7 @@ export function buildApp(): Hono {
         if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return origin
         return null
       },
-      credentials: false,
+      credentials: true,
     }),
   )
 
@@ -35,8 +59,53 @@ export function buildApp(): Hono {
     }),
   )
 
+  // Browser auth: /auth/login exchanges the UI token for a signed cookie.
+  // /auth/logout clears it. The middleware below gates /api/*.
+  app.post('/auth/login', loginHandler())
+  app.post('/auth/logout', logoutHandler())
+
+  app.use('/api/*', requireAuth)
+
   app.route('/webhooks', webhooks)
   app.route('/api', api)
+
+  // Static UI (served last so /api, /webhooks, /auth, /health take priority).
+  const webDist = resolveWebDist()
+  if (webDist) {
+    log.info({ webDist }, 'serving web UI')
+    app.use(
+      '/assets/*',
+      serveStatic({
+        root: webDist,
+        rewriteRequestPath: (p) => p, // keep /assets/...
+      }),
+    )
+    // Serve specific root-level static files (manifest, icons, sw, favicons).
+    for (const file of [
+      '/manifest.webmanifest',
+      '/favicon.ico',
+      '/favicon.svg',
+      '/robots.txt',
+      '/sw.js',
+      '/registerSW.js',
+      '/icon-192.png',
+      '/icon-512.png',
+      '/apple-touch-icon.png',
+    ]) {
+      app.get(file, serveStatic({ root: webDist, path: file }))
+    }
+    // SPA fallback: any non-API GET returns index.html.
+    app.get('*', async (c) => {
+      try {
+        const html = await readFile(resolve(webDist, 'index.html'), 'utf8')
+        return c.html(html)
+      } catch {
+        return c.text('ui not built', 500)
+      }
+    })
+  } else {
+    log.warn('apps/web/dist not found; UI disabled')
+  }
 
   app.notFound((c) => c.json({ error: 'not_found' }, 404))
   app.onError((err, c) => {

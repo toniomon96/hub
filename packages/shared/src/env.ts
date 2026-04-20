@@ -69,6 +69,17 @@ const EnvSchema = z.object({
   // when the server is running in production; empty string means webhooks
   // refuse all traffic. Dev/test can set any value. 32+ random bytes in prod.
   HUB_WEBHOOK_SECRET: z.string().default(''),
+
+  // Browser UI shared token. Gates /api/* via header or signed cookie.
+  // Empty => UI cannot authenticate; /api/* still accepts x-hub-secret for
+  // the CLI/tools. Generate 32+ random bytes for prod.
+  // Kept separate from HUB_WEBHOOK_SECRET so compromise of one does not
+  // automatically compromise the other.
+  HUB_UI_TOKEN: z.string().default(''),
+
+  // Optional explicit cookie secret; if empty we HMAC with HUB_UI_TOKEN
+  // itself (fine — cookies are only valid when the token still matches).
+  HUB_COOKIE_SECRET: z.string().default(''),
 })
 
 export type Env = z.infer<typeof EnvSchema>
