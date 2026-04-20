@@ -38,6 +38,39 @@ Copy `.env.example` to `.env` and fill in. Minimum for MVP: `ANTHROPIC_API_KEY`,
 `NOTION_TOKEN`, `OBSIDIAN_API_KEY` + `OBSIDIAN_VAULT_PATH`,
 `GOOGLE_OAUTH_CLIENT_ID/SECRET`, `HUB_SENSITIVITY_PATTERNS`.
 
+## Webhooks (Superwhisper, Granola, etc.)
+
+All endpoints under `/webhooks/*` require a shared secret header. Set
+`HUB_WEBHOOK_SECRET` in `.env` to any random 32+ byte string, e.g.:
+
+```pwsh
+# generate a secret
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Endpoints (all `POST`):
+- `/webhooks/superwhisper` — voice dictation
+- `/webhooks/granola` — meeting transcripts
+- `/webhooks/plaud` — voice recorder transcripts
+- `/webhooks/martin` — Martin AI forwards
+- `/webhooks/manual` — generic
+
+Each accepts `{ "text" | "transcript" | "body": string, "ref"?: string }`
+and must include header `x-hub-secret: <HUB_WEBHOOK_SECRET>`. Returns
+`202` with the capture row. Unset secret → `503`. Bad/missing header → `401`.
+
+### Superwhisper setup
+
+In Superwhisper → Modes → your dictation mode → Webhook:
+- URL: `http://<hub-host>:4567/webhooks/superwhisper`
+- Method: `POST`
+- Headers: `x-hub-secret: <your HUB_WEBHOOK_SECRET>`, `content-type: application/json`
+- Body: `{"text": "{{transcription}}", "ref": "superwhisper://{{id}}"}`
+
+For remote phone dictation, expose the server via Cloudflare Tunnel or Tailscale
+Funnel. Do **not** publish port 4567 directly to the internet.
+
+
 ## Layout
 
 ```
