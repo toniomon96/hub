@@ -19,6 +19,7 @@
     "dev": "pnpm -r --parallel --filter @hub/server --filter @hub/web dev",
     "dev:server": "pnpm --filter @hub/server dev",
     "dev:web": "pnpm --filter @hub/web dev",
+    "hub": "node --no-warnings=ExperimentalWarning apps/cli/dist/main.js",
     "clean": "pnpm -r exec rimraf dist node_modules .turbo && rimraf node_modules",
     "prepare": "husky"
   },
