@@ -8,7 +8,8 @@
   "exports": {
     ".": "./dist/index.js",
     "./classify": "./dist/classify.js",
-    "./ingest": "./dist/ingest.js"
+    "./ingest": "./dist/ingest.js",
+    "./inbox": "./dist/inbox.js"
   },
   "scripts": {
     "build": "tsup",
