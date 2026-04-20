@@ -5,6 +5,7 @@ import { getOllamaClient } from '@hub/models/ollama'
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import type { Options } from '@anthropic-ai/claude-agent-sdk'
 import { startRun, finishRun } from './persist.js'
+import { getTodaySpendUsd } from '@hub/db'
 import { buildMcpScopes, type McpScopeName, type McpServerCfg } from './mcp-config.js'
 
 const log = getLogger('agent-runtime')
@@ -44,7 +45,8 @@ export interface RunResult {
  * Persists a `runs` row on entry and finalizes it on exit with cost + tokens.
  */
 export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
-  const decision = route(task)
+  const todaySpendUsd = await getTodaySpendUsd()
+  const decision = route(task, { todaySpendUsd })
   const scopeNames = opts.scopes ?? []
   const scopeMap = buildMcpScopes()
 
