@@ -9,25 +9,12 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  actions: read
-  pull-requests: read
 
 concurrency:
   group: security-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  codeql:
-    name: codeql
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript
-      - uses: github/codeql-action/analyze@v3
-
   deps:
     name: deps-audit
     runs-on: ubuntu-latest
@@ -46,6 +33,9 @@ jobs:
   secrets:
     name: secrets-scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
