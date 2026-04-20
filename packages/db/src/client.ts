@@ -47,7 +47,9 @@ export function getDb(): SqliteRemoteDatabase<typeof schema> {
         // For get(): undefined rows signals "no row" to drizzle's mapGetResult.
         // An empty array [] would be mapped to an empty row object (truthy) and
         // cause phantom duplicates.
-        return { rows: values.length > 0 ? (values[0] as unknown[]) : (undefined as unknown as unknown[]) }
+        return {
+          rows: values.length > 0 ? (values[0] as unknown[]) : (undefined as unknown as unknown[]),
+        }
       }
       return { rows: values }
     },

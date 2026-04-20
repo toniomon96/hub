@@ -12,10 +12,7 @@ const log = getLogger('db-migrate')
  */
 function resolveMigrationsFolder(): string {
   const here = dirname(fileURLToPath(import.meta.url))
-  const tries = [
-    resolve(here, '..', 'migrations'),
-    resolve(here, '..', '..', 'migrations'),
-  ]
+  const tries = [resolve(here, '..', 'migrations'), resolve(here, '..', '..', 'migrations')]
   for (const t of tries) if (existsSync(t)) return t
   throw new Error(`Could not locate @hub/db migrations folder (tried ${tries.join(', ')})`)
 }

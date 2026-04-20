@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        patterns:
+          - '@types/*'
+          - 'eslint*'
+          - 'typescript-eslint'
+          - 'prettier'
+          - 'vitest'
+          - 'tsup'
+          - 'rimraf'
+      prod-minor-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - type:chore
+      - area:infra
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - type:chore
+      - area:infra

@@ -1,0 +1,38 @@
+name: Bug
+description: Something broken
+labels: [type:bug, status:needs-triage]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Command invoked + expected vs actual output.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Repro steps
+      description: Minimal steps to reproduce.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Hub version / commit
+      placeholder: v0.3.0 or f5059c1
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (redacted)
+      render: shell
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - sev1 (data loss / secret leak)
+        - sev2 (broken command / wrong output)
+        - sev3 (cosmetic / slow)
+    validations:
+      required: true

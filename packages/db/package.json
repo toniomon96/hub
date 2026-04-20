@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@hub/shared": "workspace:*",
-    "drizzle-orm": "^0.38.4"
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.1",

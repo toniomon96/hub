@@ -22,7 +22,7 @@
     "@hub/db": "workspace:*",
     "@hub/models": "workspace:*",
     "@hub/shared": "workspace:*",
-    "drizzle-orm": "^0.38.3"
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "tsup": "^8.3.5",
