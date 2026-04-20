@@ -9,7 +9,8 @@
     ".": "./dist/index.js",
     "./run": "./dist/run.js",
     "./mcp-config": "./dist/mcp-config.js",
-    "./persist": "./dist/persist.js"
+    "./persist": "./dist/persist.js",
+    "./brief": "./dist/brief.js"
   },
   "scripts": {
     "build": "tsup",

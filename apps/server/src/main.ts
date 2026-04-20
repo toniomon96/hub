@@ -11,6 +11,7 @@ import { getDb } from '@hub/db'
 import { webhooks } from './webhooks.js'
 import { api } from './api.js'
 import { requireAuth, loginHandler, logoutHandler } from './auth.js'
+import { startScheduler } from './cron.js'
 
 const log = getLogger('server')
 
@@ -123,6 +124,8 @@ export async function main(): Promise<void> {
   const app = buildApp()
   serve({ fetch: app.fetch, port: env.HUB_PORT, hostname: env.HUB_HOST })
   log.info({ port: env.HUB_PORT, host: env.HUB_HOST }, 'hub server listening')
+  // Brief scheduler — a no-op unless HUB_BRIEF_ENABLED=1.
+  startScheduler()
 }
 
 const isEntryPoint =
