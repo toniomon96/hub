@@ -4,15 +4,19 @@ import { Capture } from './pages/Capture.js'
 import { Ask } from './pages/Ask.js'
 import { Captures } from './pages/Captures.js'
 import { Runs } from './pages/Runs.js'
+import { Brief } from './pages/Brief.js'
+import { Settings } from './pages/Settings.js'
 import { Login } from './pages/Login.js'
 import { api } from './api.js'
 
 const navItems = [
   { to: '/', label: 'Dashboard' },
+  { to: '/brief', label: 'Brief' },
   { to: '/ask', label: 'Ask' },
   { to: '/capture', label: 'Capture' },
   { to: '/captures', label: 'Captures' },
   { to: '/runs', label: 'Runs' },
+  { to: '/settings', label: 'Settings' },
 ]
 
 export function App() {
@@ -33,13 +37,13 @@ export function App() {
 
   return (
     <div className="min-h-full flex flex-col">
-      <header className="border-b border-neutral-800 bg-neutral-900/60 backdrop-blur">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-6">
+      <header className="border-b border-neutral-800 bg-neutral-900/60 backdrop-blur sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="text-lg font-semibold tracking-tight">
             <span className="text-emerald-400">hub</span>
             <span className="text-neutral-500 font-normal ml-2 text-sm">v0.3.0</span>
           </div>
-          <nav className="flex gap-1 text-sm">
+          <nav className="flex flex-wrap gap-1 text-sm order-last sm:order-none w-full sm:w-auto">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -66,13 +70,15 @@ export function App() {
           </button>
         </div>
       </header>
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/brief" element={<Brief />} />
           <Route path="/ask" element={<Ask />} />
           <Route path="/capture" element={<Capture />} />
           <Route path="/captures" element={<Captures />} />
           <Route path="/runs" element={<Runs />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
       <footer className="border-t border-neutral-800 text-xs text-neutral-500 py-3 text-center">

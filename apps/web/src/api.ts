@@ -27,6 +27,82 @@ export interface CaptureRow {
   status: string
   rawContentRef: string
 }
+export interface CaptureDetail extends CaptureRow {
+  contentHash: string
+  confidence: number | null
+  modelUsed: string | null
+  errorMessage: string | null
+  entities: Array<{ name?: string; type?: string }>
+  actionItems: Array<{ text?: string; due?: string }>
+  decisions: Array<{ text?: string }>
+  dispatchedTo: string[]
+  body: string | null
+}
+
+export interface BriefingRow {
+  date: string
+  generatedAt: number
+  runId: string
+  obsidianRef: string
+  rating: number | null
+}
+
+export interface Settings {
+  version: string
+  timezone: string
+  port: number
+  host: string
+  vaultPath: string | null
+  dbPath: string
+  logLevel: string
+  models: {
+    default: string
+    localTrivial: string
+    localPrivate: string
+    localFallback: string
+  }
+  dailyUsdCap: number
+  ollamaUrl: string
+  integrations: Record<string, boolean>
+}
+export interface CaptureDetail extends CaptureRow {
+  contentHash: string
+  confidence: number | null
+  modelUsed: string | null
+  errorMessage: string | null
+  entities: Array<{ name?: string; type?: string }>
+  actionItems: Array<{ text?: string; due?: string }>
+  decisions: Array<{ text?: string }>
+  dispatchedTo: string[]
+  body: string | null
+}
+
+export interface BriefingRow {
+  date: string
+  generatedAt: number
+  runId: string
+  obsidianRef: string
+  rating: number | null
+}
+
+export interface Settings {
+  version: string
+  timezone: string
+  port: number
+  host: string
+  vaultPath: string | null
+  dbPath: string
+  logLevel: string
+  models: {
+    default: string
+    localTrivial: string
+    localPrivate: string
+    localFallback: string
+  }
+  dailyUsdCap: number
+  ollamaUrl: string
+  integrations: Record<string, boolean>
+}
 
 export interface AskResponse {
   runId: string
@@ -63,6 +139,10 @@ export const api = {
   status: () => request<StatusResponse>('/api/status'),
   captures: (limit = 50) =>
     request<{ captures: CaptureRow[] }>(`/api/captures?limit=${limit}`).then((r) => r.captures),
+  captureDetail: (id: string) => request<CaptureDetail>(`/api/captures/${encodeURIComponent(id)}`),
+  briefings: (limit = 30) =>
+    request<{ briefings: BriefingRow[] }>(`/api/briefings?limit=${limit}`).then((r) => r.briefings),
+  settings: () => request<Settings>('/api/settings'),
   capture: (text: string, source = 'manual') =>
     request<{ id: string; isDuplicate: boolean }>('/api/captures', {
       method: 'POST',
