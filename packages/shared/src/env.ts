@@ -64,6 +64,11 @@ const EnvSchema = z.object({
   // silently downgrades cloud routes to the local fallback model.
   // Default 5 USD/day: enough for exploratory use, low enough to cap runaway loops.
   HUB_DAILY_USD_CAP: z.coerce.number().nonnegative().default(5),
+
+  // Shared secret for all /webhooks/* endpoints. Required to be non-empty
+  // when the server is running in production; empty string means webhooks
+  // refuse all traffic. Dev/test can set any value. 32+ random bytes in prod.
+  HUB_WEBHOOK_SECRET: z.string().default(''),
 })
 
 export type Env = z.infer<typeof EnvSchema>
