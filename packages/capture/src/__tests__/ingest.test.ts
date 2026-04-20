@@ -41,6 +41,7 @@ describe('ingest', () => {
       source: 'manual',
       text: 'remind me to call Bob',
       rawContentRef: 'cli://manual/1',
+      classify: false,
     })
     expect(result.isDuplicate).toBe(false)
     expect(result.id).toMatch(/^[0-9A-Z]{20,}$/) // ULID
@@ -52,11 +53,13 @@ describe('ingest', () => {
       source: 'superwhisper',
       text: 'meeting notes from standup',
       rawContentRef: 'sw://1',
+      classify: false,
     })
     const b = await ingest({
       source: 'superwhisper',
       text: 'meeting notes from standup',
       rawContentRef: 'sw://2-retry-of-1',
+      classify: false,
     })
     expect(a.isDuplicate).toBe(false)
     expect(b.isDuplicate).toBe(true)
@@ -69,11 +72,13 @@ describe('ingest', () => {
       source: 'manual',
       text: 'first thought',
       rawContentRef: 'cli://1',
+      classify: false,
     })
     const b = await ingest({
       source: 'manual',
       text: 'second thought',
       rawContentRef: 'cli://2',
+      classify: false,
     })
     expect(a.id).not.toBe(b.id)
     expect(a.isDuplicate).toBe(false)
@@ -86,11 +91,13 @@ describe('ingest', () => {
       source: 'granola',
       text: 'transcript snippet that appears twice',
       rawContentRef: 'granola://1',
+      classify: false,
     })
     const b = await ingest({
       source: 'plaud',
       text: 'transcript snippet that appears twice',
       rawContentRef: 'plaud://1',
+      classify: false,
     })
     expect(b.isDuplicate).toBe(true)
     expect(b.id).toBe(a.id)
