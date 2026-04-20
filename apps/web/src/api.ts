@@ -27,6 +27,7 @@ export interface CaptureRow {
   status: string
   rawContentRef: string
 }
+
 export interface CaptureDetail extends CaptureRow {
   contentHash: string
   confidence: number | null
@@ -47,42 +48,9 @@ export interface BriefingRow {
   rating: number | null
 }
 
-export interface Settings {
-  version: string
-  timezone: string
-  port: number
-  host: string
-  vaultPath: string | null
-  dbPath: string
-  logLevel: string
-  models: {
-    default: string
-    localTrivial: string
-    localPrivate: string
-    localFallback: string
-  }
-  dailyUsdCap: number
-  ollamaUrl: string
-  integrations: Record<string, boolean>
-}
-export interface CaptureDetail extends CaptureRow {
-  contentHash: string
-  confidence: number | null
-  modelUsed: string | null
-  errorMessage: string | null
-  entities: Array<{ name?: string; type?: string }>
-  actionItems: Array<{ text?: string; due?: string }>
-  decisions: Array<{ text?: string }>
-  dispatchedTo: string[]
+export interface BriefingDetail extends BriefingRow {
+  notes: string | null
   body: string | null
-}
-
-export interface BriefingRow {
-  date: string
-  generatedAt: number
-  runId: string
-  obsidianRef: string
-  rating: number | null
 }
 
 export interface Settings {
@@ -121,7 +89,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
   })
   if (res.status === 401) {
-    // Cookie missing or expired. Bounce to login; preserve intended path.
     const back = encodeURIComponent(window.location.pathname + window.location.search)
     if (!window.location.pathname.startsWith('/login')) {
       window.location.replace(`/login?return=${back}`)
@@ -142,6 +109,8 @@ export const api = {
   captureDetail: (id: string) => request<CaptureDetail>(`/api/captures/${encodeURIComponent(id)}`),
   briefings: (limit = 30) =>
     request<{ briefings: BriefingRow[] }>(`/api/briefings?limit=${limit}`).then((r) => r.briefings),
+  briefingDetail: (date: string) =>
+    request<BriefingDetail>(`/api/briefings/${encodeURIComponent(date)}`),
   settings: () => request<Settings>('/api/settings'),
   capture: (text: string, source = 'manual') =>
     request<{ id: string; isDuplicate: boolean }>('/api/captures', {

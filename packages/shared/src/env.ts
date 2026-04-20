@@ -80,6 +80,11 @@ const EnvSchema = z.object({
   // Optional explicit cookie secret; if empty we HMAC with HUB_UI_TOKEN
   // itself (fine — cookies are only valid when the token still matches).
   HUB_COOKIE_SECRET: z.string().default(''),
+
+  // Brief scheduler: when set to '1', the server starts the node-cron jobs for
+  // the nightly 22:00 brief, 05:00 morning brief, Fri retro, Sun planning.
+  // Defaults to '0' so dev/test never silently spend Anthropic credits.
+  HUB_BRIEF_ENABLED: z.enum(['0', '1']).default('0'),
 })
 
 export type Env = z.infer<typeof EnvSchema>

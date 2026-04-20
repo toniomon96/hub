@@ -233,6 +233,34 @@ api.get('/briefings', async (c) => {
 })
 
 /**
+ * GET /api/briefings/:date
+ * Full briefing metadata + file body (read from Obsidian vault at obsidianRef).
+ */
+api.get('/briefings/:date', async (c) => {
+  const date = c.req.param('date')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return c.json({ error: 'bad_date' }, 400)
+  }
+  const db = getDb()
+  const row = await db
+    .select()
+    .from(briefings)
+    .where(sql`date = ${date}`)
+    .get()
+  if (!row) return c.json({ error: 'not_found' }, 404)
+
+  let body: string | null = null
+  if (row.obsidianRef.endsWith('.md')) {
+    try {
+      body = await readFile(row.obsidianRef, 'utf8')
+    } catch (err) {
+      log.warn({ ref: row.obsidianRef, err: String(err) }, 'brief body unreadable')
+    }
+  }
+  return c.json({ ...row, body })
+})
+
+/**
  * GET /api/settings
  * Read-only, redacted view of server config. Never returns secrets.
  */

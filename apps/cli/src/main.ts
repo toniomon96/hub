@@ -16,17 +16,22 @@ program
   .description("Generate today's briefing (or fetch the cached one)")
   .option('-d, --date <YYYY-MM-DD>', 'specific date')
   .option('--regenerate', 'force regeneration', false)
+  .option('--local', 'skip the Agent SDK; local-only summary', false)
   .action(async (opts) => {
-    const result = await run(
-      { input: `Generate briefing for ${opts.date ?? 'today'}`, source: 'cli', forceLocal: false },
-      {
-        agentName: 'nightly-brief',
-        scopes: ['knowledge', 'workspace', 'tasks'],
-        permissionTier: 'R1',
-      },
+    const { runBrief } = await import('@hub/agent-runtime/brief')
+    const result = await runBrief({
+      date: opts.date,
+      regenerate: !!opts.regenerate,
+      localOnly: !!opts.local,
+      source: 'cli',
+    })
+    console.log(
+      kleur.cyan(
+        `${result.cached ? 'cached' : 'generated'} brief for ${result.date} (run ${result.runId}, ${result.status})`,
+      ),
     )
-    console.log(kleur.cyan(`run ${result.runId} → ${result.modelUsed}`))
-    console.log(result.output)
+    if (result.path) console.log(kleur.gray(result.path))
+    if (result.output) console.log('\n' + result.output)
   })
 
 program
