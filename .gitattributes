@@ -1,0 +1,10 @@
+# Enforce LF for all text files so prettier + CI match local on Windows.
+# Without this, Windows clients check out with CRLF and prettier --check fails.
+* text=auto eol=lf
+
+# Binary files — never munge
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.pdf binary
