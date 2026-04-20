@@ -90,3 +90,61 @@ describe('route — privacy gate (LOAD-BEARING)', () => {
     expect(decision.spec.provider).toBe('anthropic')
   })
 })
+
+describe('route — daily cost cap', () => {
+  it('spend below cap still routes to anthropic', () => {
+    process.env['HUB_DAILY_USD_CAP'] = '5'
+    _resetEnvCache()
+    const decision = route(
+      {
+        input: 'Summarize the implications of switching from Postgres to SQLite for our project.',
+        source: 'cli',
+        forceLocal: false,
+      },
+      { todaySpendUsd: 2.5 },
+    )
+    expect(decision.spec.provider).toBe('anthropic')
+  })
+
+  it('spend at/above cap downgrades cloud routes to local fallback', () => {
+    process.env['HUB_DAILY_USD_CAP'] = '5'
+    _resetEnvCache()
+    const decision = route(
+      {
+        input: 'Summarize the implications of switching from Postgres to SQLite for our project.',
+        source: 'cli',
+        forceLocal: false,
+      },
+      { todaySpendUsd: 5 },
+    )
+    expect(decision.spec.provider).toBe('ollama')
+    expect(decision.spec.model).toBe('llama3.3')
+    expect(decision.spec.reason).toMatch(/cost cap/i)
+  })
+
+  it('cap is not checked before the privacy gate (high-sens still goes to private model)', () => {
+    process.env['HUB_DAILY_USD_CAP'] = '5'
+    _resetEnvCache()
+    const decision = route(
+      { input: 'my prescription notes', source: 'cli', forceLocal: false },
+      { todaySpendUsd: 100 },
+    )
+    expect(decision.spec.provider).toBe('ollama')
+    // Privacy route uses PRIVATE model, not FALLBACK — cap didn't short-circuit.
+    expect(decision.spec.model).toBe('qwen3:7b')
+  })
+
+  it('cap of 0 disables enforcement entirely', () => {
+    process.env['HUB_DAILY_USD_CAP'] = '0'
+    _resetEnvCache()
+    const decision = route(
+      {
+        input: 'Summarize the implications of switching from Postgres to SQLite for our project.',
+        source: 'cli',
+        forceLocal: false,
+      },
+      { todaySpendUsd: 9999 },
+    )
+    expect(decision.spec.provider).toBe('anthropic')
+  })
+})

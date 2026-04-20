@@ -3,14 +3,15 @@ import { loadEnv, type Triage, type ModelSpec, type Task } from '@hub/shared'
 /**
  * MVP Router — minimal but real (LOAD-BEARING v0.3 fix #1).
  *
- * Three rules, evaluated in order. First match wins. The privacy guarantee
+ * Four rules, evaluated in order. First match wins. The privacy guarantee
  * ("sensitivity=high never hits Anthropic") is enforced HERE, day one, with
  * no fallback to a cloud classifier — sensitivity is computed by regex on the
  * raw input string before any model call.
  *
  *   1. localOnly OR sensitivity=high  → local SLM (Qwen3 7B by default)
  *   2. complexity=trivial             → local SLM (Phi-4-mini)
- *   3. default                        → Anthropic Sonnet
+ *   3. cost cap reached for today     → local SLM (fallback, Llama3.3)
+ *   4. default                        → Anthropic Sonnet
  *
  * V1 expands to the full table from ARCHITECTURE.md §13.
  *
@@ -24,7 +25,19 @@ export interface RouterDecision {
   triage: Triage
 }
 
-export function route(task: Task, opts: { triage?: Partial<Triage> } = {}): RouterDecision {
+export interface RouteOpts {
+  triage?: Partial<Triage>
+  /**
+   * Current USD spent today (all providers) as seen by the caller.
+   * When `>= HUB_DAILY_USD_CAP` the router downgrades cloud routes to the
+   * local fallback model. Omitted → treated as 0 (no cap enforcement).
+   * This stays an input (not a DB call from the router) so `route()` remains
+   * pure and sync; callers query spend once per invocation.
+   */
+  todaySpendUsd?: number
+}
+
+export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
   const env = loadEnv()
 
   // 1. Compute sensitivity FIRST, locally, by regex. ALWAYS run the regex —
@@ -58,6 +71,20 @@ export function route(task: Task, opts: { triage?: Partial<Triage> } = {}): Rout
         provider: 'ollama',
         model: env.HUB_LOCAL_MODEL_TRIVIAL,
         reason: 'complexity=trivial → local SLM',
+      },
+    }
+  }
+
+  // 3. Cost ceiling — spend tracked today reached the cap.
+  //    Degrade silently to local fallback rather than failing the request.
+  const spend = opts.todaySpendUsd ?? 0
+  if (env.HUB_DAILY_USD_CAP > 0 && spend >= env.HUB_DAILY_USD_CAP) {
+    return {
+      triage,
+      spec: {
+        provider: 'ollama',
+        model: env.HUB_LOCAL_MODEL_FALLBACK,
+        reason: `daily cost cap reached ($${spend.toFixed(2)} ≥ $${env.HUB_DAILY_USD_CAP.toFixed(2)}) → local fallback`,
       },
     }
   }

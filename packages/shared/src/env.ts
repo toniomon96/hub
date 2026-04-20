@@ -59,6 +59,11 @@ const EnvSchema = z.object({
 
   // Privacy router (load-bearing: enforced from MVP day 1)
   HUB_SENSITIVITY_PATTERNS: z.string().default(''),
+
+  // Cost ceiling — when today's Anthropic spend ≥ this USD cap, the router
+  // silently downgrades cloud routes to the local fallback model.
+  // Default 5 USD/day: enough for exploratory use, low enough to cap runaway loops.
+  HUB_DAILY_USD_CAP: z.coerce.number().nonnegative().default(5),
 })
 
 export type Env = z.infer<typeof EnvSchema>
