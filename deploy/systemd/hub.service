@@ -1,0 +1,30 @@
+[Unit]
+Description=Hub — personal AI operating layer
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hub
+Group=hub
+WorkingDirectory=/var/lib/hub/hub
+EnvironmentFile=/var/lib/hub/hub/.env
+# node:sqlite is experimental in Node 20/22/24 — silence the one-shot stderr warning.
+ExecStart=/usr/bin/node --no-warnings=ExperimentalWarning apps/server/dist/main.js
+Restart=always
+RestartSec=3
+# Hard cap memory so a runaway agent loop can't OOM the 4 GB VPS.
+MemoryMax=1500M
+# Give the server its own /tmp so stale locks from a previous boot don't survive.
+PrivateTmp=true
+# Defense in depth: the service only needs to write to HUB_DB_PATH, vault, and logs.
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/hub
+NoNewPrivileges=true
+# Log to journald (rotate with journald.conf — default 4 GB / 1 month is fine).
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

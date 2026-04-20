@@ -1,0 +1,17 @@
+# Example cloudflared config. Copy to /etc/cloudflared/config.yml on the VPS
+# and replace the tunnel UUID + credentials-file path with your existing tunnel.
+#
+# Same tunnel UUID as the laptop → DNS never changes → iPhone Shortcut keeps working.
+
+tunnel: <PASTE-YOUR-TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<PASTE-YOUR-TUNNEL-UUID>.json
+
+# Per-hostname routing.
+ingress:
+  - hostname: hub.bambamhub.com
+    service: http://127.0.0.1:4567
+    originRequest:
+      connectTimeout: 10s
+      noTLSVerify: false
+  # Catch-all — required last entry per cloudflared schema.
+  - service: http_status:404
