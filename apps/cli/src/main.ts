@@ -4,6 +4,7 @@ import { run } from '@hub/agent-runtime'
 import { getDb } from '@hub/db'
 import { runs, captures, agentLocks } from '@hub/db/schema'
 import { sql } from 'drizzle-orm'
+import { runDoctor, printDoctorReport } from './doctor.js'
 
 const program = new Command()
   .name('hub')
@@ -97,6 +98,15 @@ program
     const { migrate } = await import('@hub/db/migrate')
     migrate()
     console.log(kleur.green('migrations applied'))
+  })
+
+program
+  .command('doctor')
+  .description('Preflight: verify env, DB, migrations, and integration reachability')
+  .action(async () => {
+    const { results, ok } = await runDoctor()
+    printDoctorReport(results, ok)
+    if (!ok) process.exit(1)
   })
 
 program
