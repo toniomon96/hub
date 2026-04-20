@@ -218,23 +218,17 @@
       "indexes": {
         "captures_content_hash_idx": {
           "name": "captures_content_hash_idx",
-          "columns": [
-            "content_hash"
-          ],
+          "columns": ["content_hash"],
           "isUnique": false
         },
         "captures_received_at_idx": {
           "name": "captures_received_at_idx",
-          "columns": [
-            "received_at"
-          ],
+          "columns": ["received_at"],
           "isUnique": false
         },
         "captures_status_idx": {
           "name": "captures_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },
@@ -307,17 +301,12 @@
       "indexes": {
         "embeddings_source_idx": {
           "name": "embeddings_source_idx",
-          "columns": [
-            "source_kind",
-            "source_ref"
-          ],
+          "columns": ["source_kind", "source_ref"],
           "isUnique": false
         },
         "embeddings_content_hash_idx": {
           "name": "embeddings_content_hash_idx",
-          "columns": [
-            "content_hash"
-          ],
+          "columns": ["content_hash"],
           "isUnique": false
         }
       },
@@ -456,16 +445,12 @@
       "indexes": {
         "projects_domain_idx": {
           "name": "projects_domain_idx",
-          "columns": [
-            "domain"
-          ],
+          "columns": ["domain"],
           "isUnique": false
         },
         "projects_status_idx": {
           "name": "projects_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         }
       },
@@ -607,30 +592,22 @@
       "indexes": {
         "runs_agent_name_idx": {
           "name": "runs_agent_name_idx",
-          "columns": [
-            "agent_name"
-          ],
+          "columns": ["agent_name"],
           "isUnique": false
         },
         "runs_started_at_idx": {
           "name": "runs_started_at_idx",
-          "columns": [
-            "started_at"
-          ],
+          "columns": ["started_at"],
           "isUnique": false
         },
         "runs_status_idx": {
           "name": "runs_status_idx",
-          "columns": [
-            "status"
-          ],
+          "columns": ["status"],
           "isUnique": false
         },
         "runs_parent_idx": {
           "name": "runs_parent_idx",
-          "columns": [
-            "parent_run_id"
-          ],
+          "columns": ["parent_run_id"],
           "isUnique": false
         }
       },

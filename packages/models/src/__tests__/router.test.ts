@@ -16,8 +16,12 @@ beforeEach(() => {
 describe('detectSensitivity', () => {
   it('returns high on pattern match (case-insensitive)', () => {
     expect(detectSensitivity('My SSN is bad', TEST_ENV.HUB_SENSITIVITY_PATTERNS)).toBe('high')
-    expect(detectSensitivity('what did my wife say', TEST_ENV.HUB_SENSITIVITY_PATTERNS)).toBe('high')
-    expect(detectSensitivity('check my bank account balance', TEST_ENV.HUB_SENSITIVITY_PATTERNS)).toBe('high')
+    expect(detectSensitivity('what did my wife say', TEST_ENV.HUB_SENSITIVITY_PATTERNS)).toBe(
+      'high',
+    )
+    expect(
+      detectSensitivity('check my bank account balance', TEST_ENV.HUB_SENSITIVITY_PATTERNS),
+    ).toBe('high')
   })
   it('returns low when no pattern matches', () => {
     expect(detectSensitivity('what is the weather', TEST_ENV.HUB_SENSITIVITY_PATTERNS)).toBe('low')

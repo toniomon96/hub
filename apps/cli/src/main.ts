@@ -18,7 +18,11 @@ program
   .action(async (opts) => {
     const result = await run(
       { input: `Generate briefing for ${opts.date ?? 'today'}`, source: 'cli', forceLocal: false },
-      { agentName: 'nightly-brief', scopes: ['knowledge', 'workspace', 'tasks'], permissionTier: 'R1' },
+      {
+        agentName: 'nightly-brief',
+        scopes: ['knowledge', 'workspace', 'tasks'],
+        permissionTier: 'R1',
+      },
     )
     console.log(kleur.cyan(`run ${result.runId} → ${result.modelUsed}`))
     console.log(result.output)
@@ -43,8 +47,20 @@ program
   .description('Show DB stats, recent runs, and active leases')
   .action(async () => {
     const db = getDb()
-    const captureCount = (await db.select({ n: sql<number>`count(*)` }).from(captures).get())?.n ?? 0
-    const runCount = (await db.select({ n: sql<number>`count(*)` }).from(runs).get())?.n ?? 0
+    const captureCount =
+      (
+        await db
+          .select({ n: sql<number>`count(*)` })
+          .from(captures)
+          .get()
+      )?.n ?? 0
+    const runCount =
+      (
+        await db
+          .select({ n: sql<number>`count(*)` })
+          .from(runs)
+          .get()
+      )?.n ?? 0
     const leases = await db.select().from(agentLocks).all()
     const recent = await db
       .select({
@@ -67,7 +83,9 @@ program
       console.log(kleur.bold('\nrecent runs'))
       for (const r of recent) {
         const when = new Date(r.startedAt).toISOString()
-        console.log(`  ${kleur.gray(when)}  ${r.agent.padEnd(16)}  ${r.model.padEnd(36)}  ${r.status}`)
+        console.log(
+          `  ${kleur.gray(when)}  ${r.agent.padEnd(16)}  ${r.model.padEnd(36)}  ${r.status}`,
+        )
       }
     }
   })

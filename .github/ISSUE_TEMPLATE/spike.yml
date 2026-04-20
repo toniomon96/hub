@@ -1,0 +1,23 @@
+name: Spike / research
+description: Time-boxed investigation
+labels: [type:spike, status:needs-triage]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question to answer
+    validations:
+      required: true
+  - type: input
+    id: timebox
+    attributes:
+      label: Timebox (hours)
+    validations:
+      required: true
+  - type: textarea
+    id: exits
+    attributes:
+      label: Exit criteria
+      value: |
+        - [ ] Decision logged in `DECISIONS.md`
+        - [ ] Follow-up issues created (or explicit "none")

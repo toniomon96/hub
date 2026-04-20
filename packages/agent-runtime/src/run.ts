@@ -197,16 +197,10 @@ interface OllamaRunResult {
   outputTokens: number
 }
 
-async function runOllama(
-  task: Task,
-  model: string,
-  opts: RunOptions,
-): Promise<OllamaRunResult> {
+async function runOllama(task: Task, model: string, opts: RunOptions): Promise<OllamaRunResult> {
   const client = getOllamaClient()
   const messages = [
-    ...(opts.systemPrompt
-      ? [{ role: 'system' as const, content: opts.systemPrompt }]
-      : []),
+    ...(opts.systemPrompt ? [{ role: 'system' as const, content: opts.systemPrompt }] : []),
     { role: 'user' as const, content: task.input },
   ]
   const res = await client.chat.completions.create({

@@ -85,7 +85,10 @@ export function route(task: Task, opts: { triage?: Partial<Triage> } = {}): Rout
  */
 export function detectSensitivity(input: string, patterns: string): 'low' | 'medium' | 'high' {
   if (!patterns.trim()) return 'low'
-  const groups = patterns.split(',').map((p) => p.trim()).filter(Boolean)
+  const groups = patterns
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
   for (const g of groups) {
     try {
       if (new RegExp(g, 'i').test(input)) return 'high'
