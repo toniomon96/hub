@@ -3,6 +3,7 @@ import { captures } from '@hub/db/schema'
 import { newId, contentHash, getLogger, loadEnv, type CaptureSource } from '@hub/shared'
 import { eq } from 'drizzle-orm'
 import { classify } from './classify.js'
+import { fileToInbox } from './inbox.js'
 
 const log = getLogger('ingest')
 
@@ -17,10 +18,23 @@ export interface IngestArgs {
    * Classifier failure NEVER blocks ingest — the row just stays at
    * `status='received'` until something re-processes it.
    */
+  /**
+   * Append to the Obsidian inbox after successful classification.
+   * Default `true`. Skipped automatically when `OBSIDIAN_VAULT_PATH` is
+   * unset or sensitivity=high. Disabled in tests that don't want filesystem
+   * writes. No-op when classification is skipped or fails.
+   */
+  fileToInbox?: boolean
   classify?: boolean
 }
 
 export interface IngestResult {
+  /**
+   * Whether a markdown file was written to the Obsidian inbox.
+   * `false` when skipped (caller opted out, vault not configured, sensitivity=high,
+   * or write failed). Undefined when classification did not run.
+   */
+  filed?: boolean
   id: string
   isDuplicate: boolean
   /**
@@ -90,7 +104,21 @@ export async function ingest(args: IngestArgs): Promise<IngestResult> {
       { id, domain: result.domain, type: result.type, confidence: result.confidence },
       'capture classified',
     )
-    return { id, isDuplicate: false, classified: true }
+
+    if (args.fileToInbox === false) {
+      return { id, isDuplicate: false, classified: true, filed: false }
+    }
+
+    const inboxResult = await fileToInbox({
+      captureId: id,
+      text: args.text,
+      source: args.source,
+      domain: result.domain,
+      type: result.type,
+      contentHash: hash,
+      summary: result.summary,
+    })
+    return { id, isDuplicate: false, classified: true, filed: inboxResult.filed }
   } catch (err) {
     log.warn(
       { id, err: err instanceof Error ? err.message : String(err) },
