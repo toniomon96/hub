@@ -1,0 +1,12 @@
+[Unit]
+Description=Hub Obsidian vault git sync (pull from origin)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=hub
+Group=hub
+WorkingDirectory=/var/lib/hub/vault
+# Pull + ff-merge. Swallow non-zero so a transient network error doesn't
+# spam the journal; backup.sh handles disaster recovery.
+ExecStart=/bin/bash /var/lib/hub/hub/deploy/vault-sync.sh

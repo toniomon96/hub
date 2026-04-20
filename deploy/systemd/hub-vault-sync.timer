@@ -1,0 +1,12 @@
+[Unit]
+Description=Hub vault sync timer (every 60s)
+Requires=hub-vault-sync.service
+
+[Timer]
+# Every 60 seconds once the system is up. Short enough that the laptop's
+# Obsidian Git plugin (every 10m) + this (every 1m) keeps the vault tight.
+OnBootSec=60
+OnUnitActiveSec=60
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Hub nightly backup (SQLite → Cloudflare R2)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=hub
+Group=hub
+WorkingDirectory=/var/lib/hub/hub
+ExecStart=/bin/bash /var/lib/hub/hub/deploy/backup.sh
