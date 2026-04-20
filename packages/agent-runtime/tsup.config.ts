@@ -1,0 +1,9 @@
+import { defineConfig } from 'tsup'
+export default defineConfig({
+  entry: ['src/index.ts', 'src/run.ts', 'src/mcp-config.ts', 'src/persist.ts'],
+  format: ['esm'],
+  dts: true,
+  clean: true,
+  sourcemap: true,
+  target: 'node20',
+})

@@ -1,0 +1,32 @@
+{
+  "name": "@hub/agent-runtime",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./run": "./dist/run.js",
+    "./mcp-config": "./dist/mcp-config.js",
+    "./persist": "./dist/persist.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@hub/db": "workspace:*",
+    "@hub/models": "workspace:*",
+    "@hub/shared": "workspace:*",
+    "drizzle-orm": "^0.38.3"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

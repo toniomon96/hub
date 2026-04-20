@@ -1,0 +1,30 @@
+{
+  "name": "@hub/capture",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./classify": "./dist/classify.js",
+    "./ingest": "./dist/ingest.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@hub/db": "workspace:*",
+    "@hub/models": "workspace:*",
+    "@hub/shared": "workspace:*",
+    "drizzle-orm": "^0.38.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
