@@ -17,7 +17,7 @@
     "@hub/capture": "workspace:*",
     "@hub/db": "workspace:*",
     "@hub/shared": "workspace:*",
-    "commander": "^12.1.0",
+    "commander": "^14.0.3",
     "drizzle-orm": "^0.45.2",
     "kleur": "^4.1.5"
   },
