@@ -23,6 +23,52 @@ export async function getTodaySpendUsd(): Promise<number> {
   }
 }
 
+export interface SpendState {
+  /** `YYYY-MM-DD` key for the current day in `HUB_TIMEZONE`. */
+  dateKey: string
+  /** Today's Anthropic spend in USD. */
+  spent: number
+  /** Configured `HUB_DAILY_USD_CAP`. `0` means unlimited. */
+  cap: number
+  /** `spent/cap` as a fraction (0…∞). `NaN` when cap is 0. */
+  ratio: number
+}
+
+/**
+ * Snapshot today's spend plus the config-driven cap. Returned from a single
+ * DB read; callers (the 80% warning task, status endpoint, etc.) can derive
+ * thresholds without duplicating the date-bounds math.
+ */
+export async function getSpendState(): Promise<SpendState> {
+  const env = loadEnv()
+  const spent = await getTodaySpendUsd()
+  const cap = env.HUB_DAILY_USD_CAP
+  return {
+    dateKey: todayDateKey(),
+    spent,
+    cap,
+    ratio: cap > 0 ? spent / cap : Number.NaN,
+  }
+}
+
+/**
+ * `YYYY-MM-DD` in `HUB_TIMEZONE`. Stable within a calendar day — suitable
+ * as an idempotency key for per-day notifications.
+ */
+export function todayDateKey(): string {
+  const env = loadEnv()
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: env.HUB_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const y = parts.find((p) => p.type === 'year')?.value
+  const m = parts.find((p) => p.type === 'month')?.value
+  const d = parts.find((p) => p.type === 'day')?.value
+  return `${y}-${m}-${d}`
+}
+
 /**
  * [start, end) unix-ms bounds for "today" in `HUB_TIMEZONE`.
  * Uses Intl to resolve the TZ offset without a tz database dep.

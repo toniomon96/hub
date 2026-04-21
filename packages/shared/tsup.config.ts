@@ -7,6 +7,7 @@ export default defineConfig({
     'src/log.ts',
     'src/types.ts',
     'src/ids.ts',
+    'src/ntfy.ts',
     'src/contracts/index.ts',
     'src/ntfy.ts',
   ],
