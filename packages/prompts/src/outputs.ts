@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { loadEnv, getLogger, fireNtfy } from '@hub/shared'
+import { loadEnv, getLogger, publishNtfy } from '@hub/shared'
 import { Octokit } from '@octokit/rest'
 import {
   ObsidianOutputConfig,
@@ -174,7 +174,11 @@ async function handleNtfy(
     (headingMatch?.[1] ? priorityMap[headingMatch[1]] : undefined) ?? cfg.priority ?? 3
 
   const title = `Prompt ${ctx.promptId} (${ctx.repo})`
-  await fireNtfy(output.slice(0, 4096), title, priority)
+  await publishNtfy({
+    message: output.slice(0, 4096),
+    title,
+    priority: priority as 1 | 2 | 3 | 4 | 5,
+  })
 }
 
 /** Replace {key} placeholders in a template string. */

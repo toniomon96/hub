@@ -1,0 +1,11 @@
+{
+  "buildCommand": "pnpm --filter @hub/web build",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "pnpm install",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "$RAILWAY_URL/api/:path*" },
+    { "source": "/auth/:path*", "destination": "$RAILWAY_URL/auth/:path*" },
+    { "source": "/webhooks/:path*", "destination": "$RAILWAY_URL/webhooks/:path*" },
+    { "source": "/health", "destination": "$RAILWAY_URL/health" }
+  ]
+}
