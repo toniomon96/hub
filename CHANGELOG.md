@@ -16,6 +16,10 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 - Security workflow's `deps-audit` job now runs on Node 22 (was 20, below the repo's `>=22.5.0` engines floor).
 
+### Changed
+
+- `packages/shared/testing/vitest-sqlite-shim.ts`: single source for the `node:sqlite` / `node:test` Vite shim. `db`, `capture`, `agent-runtime`, and `server` vitest configs now import it instead of each carrying their own copy (~120 lines of duplication removed).
+
 ## [0.3.0] — 2026-04-21
 
 ### Added

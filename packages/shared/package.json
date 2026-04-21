@@ -10,7 +10,8 @@
     "./env": "./dist/env.js",
     "./log": "./dist/log.js",
     "./types": "./dist/types.js",
-    "./ids": "./dist/ids.js"
+    "./ids": "./dist/ids.js",
+    "./testing/vitest-sqlite-shim": "./testing/vitest-sqlite-shim.ts"
   },
   "scripts": {
     "build": "tsup",
