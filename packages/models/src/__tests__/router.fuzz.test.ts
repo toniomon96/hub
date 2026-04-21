@@ -50,18 +50,20 @@ const callerSensitivity = fc.option(
 )
 
 describe('router fuzz — load-bearing privacy invariants', () => {
-  it('INVARIANT: any input containing a sensitive token routes to ollama, no matter what the caller claims', () => {
+  it('INVARIANT: any input containing a sensitive token routes to ollama, no matter what the caller claims (10k samples)', () => {
     fc.assert(
       fc.property(sensitiveInput, callerSensitivity, fc.boolean(), (input, claim, forceLocal) => {
         const decision = route(
           { input, source: 'cli', forceLocal },
           claim ? { triage: { sensitivity: claim } } : {},
         )
+        // The roadmap v0.5 #7 acceptance gate: sensitivity=high ⇒ vendor !== 'anthropic'.
+        expect(decision.spec.provider).not.toBe('anthropic')
         expect(decision.spec.provider).toBe('ollama')
         expect(decision.triage.sensitivity).toBe('high')
         expect(decision.triage.localOnly).toBe(true)
       }),
-      { numRuns: 500 },
+      { numRuns: 10_000 },
     )
   })
 

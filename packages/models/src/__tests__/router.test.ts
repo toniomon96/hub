@@ -45,8 +45,14 @@ describe('detectComplexity', () => {
   it('flags questions as moderate', () => {
     expect(detectComplexity('what time is it?')).toBe('moderate')
   })
-  it('flags code fences as moderate', () => {
-    expect(detectComplexity('```\nx\n```')).toBe('moderate')
+  it('flags code fences as complex (new in v0.5 rule table)', () => {
+    expect(detectComplexity('```\nx\n```')).toBe('complex')
+  })
+  it('flags multi-question prose as complex', () => {
+    expect(detectComplexity('Can you explain this? And what about that?')).toBe('complex')
+  })
+  it('flags numbered enumerations as complex', () => {
+    expect(detectComplexity('Do three things:\n1. first\n2. second\n3. third')).toBe('complex')
   })
 })
 

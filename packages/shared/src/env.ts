@@ -13,6 +13,10 @@ const EnvSchema = z.object({
 
   // Models
   HUB_DEFAULT_MODEL: z.string().default('claude-sonnet-4-5'),
+  // Cloud model for router rule 4 (complexity=complex). Defaults to the
+  // same as HUB_DEFAULT_MODEL so behavior is unchanged for users who don't
+  // opt in; set to e.g. 'claude-opus-4-5' to route heavy reasoning to Opus.
+  HUB_CLOUD_MODEL_COMPLEX: z.string().default(''),
   HUB_LOCAL_MODEL_TRIVIAL: z.string().default('phi4-mini'),
   HUB_LOCAL_MODEL_PRIVATE: z.string().default('qwen3:7b'),
   HUB_LOCAL_MODEL_FALLBACK: z.string().default('llama3.3'),
