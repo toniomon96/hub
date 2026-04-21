@@ -13,6 +13,7 @@ import { api } from './api.js'
 import { requireAuth, loginHandler, logoutHandler } from './auth.js'
 import { startScheduler } from './cron.js'
 import { startSweeper } from './rate-limit.js'
+import { runHealthCheck } from './health.js'
 
 const log = getLogger('server')
 
@@ -60,6 +61,14 @@ export function buildApp(): Hono {
       timestamp: new Date().toISOString(),
     }),
   )
+
+  // Deep health check: DB round-trip, Ollama reachable, vault writable,
+  // backup freshness. Returns 503 if any configured check fails so systemd
+  // and uptime monitors can flag outages.
+  app.get('/healthz', async (c) => {
+    const report = await runHealthCheck()
+    return c.json(report, report.ok ? 200 : 503)
+  })
 
   // Browser auth: /auth/login exchanges the UI token for a signed cookie.
   // /auth/logout clears it. The middleware below gates /api/*.

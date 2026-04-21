@@ -8,6 +8,7 @@ export default defineConfig({
     'src/types.ts',
     'src/ids.ts',
     'src/contracts/index.ts',
+    'src/ntfy.ts',
   ],
   format: ['esm'],
   dts: true,

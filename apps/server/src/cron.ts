@@ -1,5 +1,5 @@
 import cron, { type ScheduledTask } from 'node-cron'
-import { loadEnv, getLogger } from '@hub/shared'
+import { loadEnv, getLogger, notify } from '@hub/shared'
 import { runBrief } from '@hub/agent-runtime/brief'
 
 const log = getLogger('cron')
@@ -52,8 +52,22 @@ async function runSafe(label: string): Promise<void> {
       { job: label, date: r.date, runId: r.runId, status: r.status, cached: r.cached },
       'cron brief complete',
     )
+    if (r.status === 'error') {
+      await notify({
+        title: `hub: ${label} errored`,
+        body: `runId ${r.runId} for ${r.date} returned status=error`,
+        priority: 'high',
+        tags: ['warning', 'hub'],
+      })
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     log.error({ job: label, err: msg }, 'cron brief failed')
+    await notify({
+      title: `hub: ${label} threw`,
+      body: msg,
+      priority: 'high',
+      tags: ['rotating_light', 'hub'],
+    })
   }
 }
