@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 /**
  * captures — raw and classified inbound items from all capture sources.
@@ -59,6 +59,11 @@ export const runs = sqliteTable(
     reversedAt: integer('reversed_at'),
     errorMessage: text('error_message'),
     outputRef: text('output_ref'),
+    // Prompt orchestration context — null for non-prompt runs
+    promptId: text('prompt_id'),
+    promptVersion: integer('prompt_version'),
+    targetRepo: text('target_repo'),
+    runTrigger: text('run_trigger'), // 'scheduled'|'event'|'manual'|'mcp'|'http'
   },
   (t) => ({
     agentNameIdx: index('runs_agent_name_idx').on(t.agentName),
@@ -159,6 +164,58 @@ export const mcpConsents = sqliteTable('mcp_consents', {
   notes: text('notes'),
 })
 
+/**
+ * prompts — synced from hub-prompts repo. Keyed on id (slug).
+ * Upserted by `hub prompt sync`; body is the full markdown content.
+ */
+export const prompts = sqliteTable('prompts', {
+  id: text('id').primaryKey(),
+  version: integer('version').notNull().default(1),
+  sourceSha: text('source_sha'),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  body: text('body').notNull(),
+  sensitivity: text('sensitivity').notNull().default('low'), // low|medium|high
+  complexity: text('complexity').notNull().default('standard'), // trivial|standard|complex
+  inputsSchema: text('inputs_schema'), // JSON
+  outputConfig: text('output_config').notNull().default('{}'), // JSON
+  tags: text('tags').notNull().default('[]'), // JSON array
+  syncedAt: integer('synced_at').notNull(),
+  enabled: integer('enabled').notNull().default(1),
+})
+
+/**
+ * prompt_targets — synced from hub-registry. Wires prompts to repos+triggers.
+ * UNIQUE(repo, prompt_id, trigger) — one target per prompt×repo×trigger tuple.
+ */
+export const promptTargets = sqliteTable(
+  'prompt_targets',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    repo: text('repo').notNull(), // 'owner/repo' slug
+    promptId: text('prompt_id').notNull(), // FK → prompts.id (CASCADE enforced in SQL)
+    trigger: text('trigger').notNull(), // 'cron:0 5 * * *'|'manual'|'event:push'
+    whenExpr: text('when_expr'), // expr-eval expression; null = always run
+    branch: text('branch').notNull().default('main'),
+    sensitivityOverride: text('sensitivity_override'), // low|medium|high
+    args: text('args').notNull().default('{}'), // JSON
+    enabled: integer('enabled').notNull().default(1),
+    sourceSha: text('source_sha'),
+    syncedAt: integer('synced_at').notNull(),
+    lastRunId: text('last_run_id'),
+    lastRunAt: integer('last_run_at'),
+  },
+  (t) => ({
+    repoPromptTriggerIdx: uniqueIndex('prompt_targets_repo_prompt_trigger_idx').on(
+      t.repo,
+      t.promptId,
+      t.trigger,
+    ),
+    triggerIdx: index('prompt_targets_trigger_idx').on(t.trigger),
+    repoIdx: index('prompt_targets_repo_idx').on(t.repo),
+  }),
+)
+
 export const allTables = {
   captures,
   runs,
@@ -167,6 +224,8 @@ export const allTables = {
   projects,
   agentLocks,
   mcpConsents,
+  prompts,
+  promptTargets,
 } as const
 
 export const REVERSAL_PAYLOAD_MAX_BYTES = 64 * 1024

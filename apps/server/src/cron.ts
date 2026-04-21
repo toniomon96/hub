@@ -41,6 +41,11 @@ export function startScheduler(): void {
   )
 
   log.info({ timezone: tz, jobCount: jobs.length }, 'scheduler started')
+
+  // Register prompt cron jobs (fire-and-forget — avoids making startScheduler async)
+  import('@hub/prompts/schedule')
+    .then(({ registerScheduledPromptJobs }) => registerScheduledPromptJobs())
+    .catch((err: unknown) => log.error({ err: String(err) }, 'prompt schedule init failed'))
 }
 
 export function stopScheduler(): void {

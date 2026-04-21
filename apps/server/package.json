@@ -18,6 +18,7 @@
     "@hub/agent-runtime": "workspace:*",
     "@hub/capture": "workspace:*",
     "@hub/db": "workspace:*",
+    "@hub/prompts": "workspace:*",
     "@hub/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.6.16",

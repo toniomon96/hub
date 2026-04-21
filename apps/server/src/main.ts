@@ -128,7 +128,18 @@ export function buildApp(): Hono {
 }
 
 export async function main(): Promise<void> {
+  // Railway injects PORT; map it to HUB_PORT so loadEnv() picks it up.
+  if (!process.env['HUB_PORT'] && process.env['PORT']) {
+    process.env['HUB_PORT'] = process.env['PORT']
+  }
+  // Railway requires binding to 0.0.0.0, not the local-only default.
+  if (!process.env['HUB_HOST']) {
+    process.env['HUB_HOST'] = '0.0.0.0'
+  }
   const env = loadEnv()
+  // Run DB migrations on every start — idempotent, fast, safe.
+  const { migrate } = await import('@hub/db/migrate')
+  migrate()
   // Ensure DB is open & schema-ready before accepting traffic.
   getDb()
   const app = buildApp()

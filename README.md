@@ -74,9 +74,35 @@ For remote phone dictation, expose the server via Cloudflare Tunnel or Tailscale
 Funnel. Do **not** publish port 4567 directly to the internet.
 
 
+## Registry management
+
+Wire prompts to repos without touching git manually. All commands support `--dry-run` to preview the diff first.
+
+```sh
+# Add a repo to the registry
+hub registry add org/my-repo --sensitivity low
+hub registry add org/my-repo --branch develop --dry-run
+
+# Wire a prompt to a repo with a cron trigger
+hub registry wire org/my-repo daily-review --trigger "cron:0 9 * * 1-5"
+hub registry wire org/my-repo pr-review --trigger "pr.opened" --dry-run
+
+# Remove a specific binding (or omit --prompt to remove the whole repo block)
+hub registry remove org/my-repo --prompt daily-review
+hub registry remove org/my-repo
+
+# List all wired targets (from local DB, reflects last sync)
+hub registry list
+hub registry list --repo org/my-repo
+```
+
+The same operations are available as MCP tools (`hub.registry.add`, `hub.registry.wire`, `hub.registry.remove`, `hub.registry.list`) for Claude Desktop, and as HTTP endpoints (`POST /api/registry/add`, etc.) for the server.
+
+Required env vars: `HUB_REGISTRY_REPO_URL`, `HUB_GITHUB_TOKEN` (for push), `HUB_GIT_AUTHOR_NAME`, `HUB_GIT_AUTHOR_EMAIL`.
+
 ## Layout
 
-```
+```text
 hub/
 ├── apps/
 │   ├── cli/          # `hub` command
@@ -86,7 +112,8 @@ hub/
 │   ├── db/           # Drizzle schema + agent_locks lease table
 │   ├── models/       # 3-rule MVP router (privacy-gated)
 │   ├── agent-runtime/# Agent SDK wrapper + MCP scope builder + run persistence
-│   └── capture/      # Webhook ingest + Ollama-backed classifier
+│   ├── capture/      # Webhook ingest + Ollama-backed classifier
+│   └── prompts/      # Prompt sync, registry editing, dispatcher, scheduler
 └── .claude/          # Skills + subagents (loaded by Agent SDK)
 ```
 

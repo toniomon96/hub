@@ -23,6 +23,11 @@ export interface RunOptions {
   systemPrompt?: string
   /** Restrict SDK tools (allowlist). Empty = SDK defaults. */
   allowedTools?: string[]
+  // Prompt orchestration context — forwarded to startRun() for audit trail
+  promptId?: string
+  promptVersion?: number
+  targetRepo?: string
+  runTrigger?: string
 }
 
 export interface RunResult {
@@ -63,6 +68,10 @@ export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
     modelUsed: `${decision.spec.provider}:${decision.spec.model}`,
     permissionTier: opts.permissionTier ?? 'R0',
     mcpServers: Object.keys(mcpServers),
+    ...(opts.promptId !== undefined ? { promptId: opts.promptId } : {}),
+    ...(opts.promptVersion !== undefined ? { promptVersion: opts.promptVersion } : {}),
+    ...(opts.targetRepo !== undefined ? { targetRepo: opts.targetRepo } : {}),
+    ...(opts.runTrigger !== undefined ? { runTrigger: opts.runTrigger } : {}),
   })
 
   log.info(
