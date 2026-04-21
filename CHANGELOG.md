@@ -30,6 +30,10 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 - `packages/shared/testing/vitest-sqlite-shim.ts`: single source for the `node:sqlite` / `node:test` Vite shim. `db`, `capture`, `agent-runtime`, and `server` vitest configs now import it instead of each carrying their own copy (~120 lines of duplication removed).
 
+### Changed
+
+- `apps/server` dev loop now uses `tsup --watch --onSuccess` instead of `tsx watch`, which was silently swallowing `node:sqlite` imports under the repo's Node 24 + Windows arm64 combo. `pnpm dev:tsx` preserved as fallback.
+
 ## [0.3.0] — 2026-04-21
 
 ### Added

@@ -7,8 +7,9 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "dev": "tsx watch src/main.ts",
-    "start": "node dist/main.js",
+    "dev": "tsup --watch --onSuccess \"node --no-warnings=ExperimentalWarning dist/main.js\"",
+    "dev:tsx": "tsx watch src/main.ts",
+    "start": "node --no-warnings=ExperimentalWarning dist/main.js",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
