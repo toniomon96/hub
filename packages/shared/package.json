@@ -11,7 +11,8 @@
     "./log": "./dist/log.js",
     "./types": "./dist/types.js",
     "./ids": "./dist/ids.js",
-    "./testing/vitest-sqlite-shim": "./testing/vitest-sqlite-shim.ts"
+    "./testing/vitest-sqlite-shim": "./testing/vitest-sqlite-shim.ts",
+    "./testing/test-env": "./testing/test-env.ts"
   },
   "scripts": {
     "build": "tsup",

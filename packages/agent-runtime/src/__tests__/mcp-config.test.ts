@@ -1,22 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { seedTestEnv, restoreTestEnv } from '@hub/shared/testing/test-env'
 import { enforceAllowlist, type McpScopes } from '../mcp-config.js'
 
 // The allowlist code path goes through the lazy-logger proxy, which calls
-// loadEnv() on first property access. Minimal env seed keeps CI (no .env)
+// loadEnv() on first property access. The shared seed keeps CI (no .env)
 // and local dev consistent.
-const ORIGINAL_ENV = { ...process.env }
-
 beforeEach(() => {
-  process.env['ANTHROPIC_API_KEY'] = 'test-key'
-  process.env['HUB_SKIP_DOTENV'] = '1'
-  process.env['HUB_LOG_LEVEL'] = 'fatal'
+  seedTestEnv()
 })
 
 afterEach(() => {
-  for (const k of Object.keys(process.env)) {
-    if (!(k in ORIGINAL_ENV)) delete process.env[k]
-    else process.env[k] = ORIGINAL_ENV[k]
-  }
+  restoreTestEnv()
 })
 
 function scopes(partial: Partial<McpScopes>): McpScopes {
