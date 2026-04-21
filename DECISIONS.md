@@ -49,6 +49,28 @@ Wrong ecosystem, redundant with Claude.
 ## 2026-04-21 — Todoist MCP: `sjvadrevu/todoist-mcp-server` with permanent token
 Avoids the OAuth refresh bug in the "official" Todoist MCP.
 
+## 2026-04-23 — Drizzle for schema + queries, `node:sqlite` for lifecycle/migrations
+The mixed approach is deliberate, not a migration-in-progress.
+
+Drizzle owns what it's good at:
+- Typed schema in `packages/db/src/schema.ts` — single source of truth for shapes.
+- Typed query builder against `drizzle-orm/sqlite-proxy` — ergonomic ingest / read code.
+- Migration generation via `pnpm db:generate`.
+
+`node:sqlite` owns the process-level edges:
+- Connection open + `PRAGMA journal_mode=WAL` + `PRAGMA foreign_keys=ON` in `packages/db/src/client.ts`.
+- Migration application in `packages/db/src/migrate.ts` — reads generated SQL, applies in a transaction, records in `__drizzle_migrations`. Drizzle's own proxy migrator is async-callback oriented; reading the SQL directly is simpler and debuggable.
+- Agent lease table in `packages/db/src/locks.ts` — positional-param `INSERT OR IGNORE` + `DELETE` on the raw handle. Drizzle's sqlite-proxy async shape is overkill for a single atomic statement per call.
+
+What this is NOT:
+- Not a bridge to a full `node:sqlite` rewrite. We keep Drizzle.
+- Not a bridge to dropping `node:sqlite`. better-sqlite3 + @libsql/client have no prebuilt Windows arm64 binaries on Node 24 (checked 2026-04-21); switching back would re-break native-module install for the dev box.
+
+Rule of thumb:
+- New reads/writes → Drizzle.
+- New lifecycle/infra probes → `node:sqlite` in `packages/db`.
+- If you find yourself writing raw SQL inside an app package, move it into `packages/db` first.
+
 ## 2026-04-21 — Google Workspace MCP: `taylorwilsdon/google_workspace_mcp`
 One server covers Gmail, Calendar, Drive, Docs, Sheets with OAuth 2.1.
 

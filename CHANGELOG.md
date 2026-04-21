@@ -24,6 +24,10 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 - `packages/shared/testing/vitest-sqlite-shim.ts`: single source for the `node:sqlite` / `node:test` Vite shim. `db`, `capture`, `agent-runtime`, and `server` vitest configs now import it instead of each carrying their own copy (~120 lines of duplication removed).
 
+### Changed
+
+- Documented the Drizzle-vs-raw-`node:sqlite` split in `DECISIONS.md` (2026-04-23) and cross-referenced from `ARCHITECTURE.md` and `packages/db/src/locks.ts`. Intent: make the mixed approach a durable, defensible decision instead of reading like half-finished cleanup.
+
 ## [0.3.0] — 2026-04-21
 
 ### Added

@@ -54,7 +54,7 @@ Sensitivity is regex-detected on raw input; `maxSensitivity` ensures caller-supp
 
 ## State layers
 
-- **SQLite** (ops): `captures`, `runs`, `embeddings`, `briefings`, `projects`, `agent_locks`, `mcp_consents`. WAL mode + 5s busy_timeout. Single Windows machine.
+- **SQLite** (ops): `captures`, `runs`, `embeddings`, `briefings`, `projects`, `agent_locks`, `mcp_consents`. WAL mode + 5s busy_timeout. Single Windows machine. Schema + queries via Drizzle; connection lifecycle, migrations, and the `agent_locks` atomic upserts use raw `node:sqlite` — see DECISIONS.md (2026-04-23) for why.
 - **Obsidian** (durable prose): vault on Windows + iPhone via Obsidian Sync. Source of truth for briefings, meetings, decisions, journals.
 - **Notion** (structured): 8 DBs — Areas, Projects, People, SOPs, Meetings, Decisions, Open Loops, Incubator.
 

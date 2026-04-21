@@ -36,6 +36,8 @@ export function tryAcquireLease(agentName: string, opts: LeaseOptions = {}): Lea
 
   // INSERT-or-UPDATE-if-stale. The WHERE predicate prevents stealing live leases.
   // Positional params for node:sqlite driver compatibility.
+  // Raw `node:sqlite` on purpose — see DECISIONS.md (2026-04-23) for the
+  // Drizzle-vs-raw-sqlite split. Single atomic statement per call, no ORM surface needed.
   const stmt = db.prepare(`
     INSERT INTO agent_locks (agent_name, pid, acquired_at, lease_until, holder_hostname)
     VALUES (?, ?, ?, ?, ?)
