@@ -146,3 +146,59 @@ describe('browser auth', () => {
     expect(setCookie).toMatch(/Max-Age=0/i)
   })
 })
+
+describe('HUB_COOKIE_SECRET vs HUB_UI_TOKEN split', () => {
+  const origNodeEnv = process.env['NODE_ENV']
+
+  afterEach(() => {
+    if (origNodeEnv === undefined) delete process.env['NODE_ENV']
+    else process.env['NODE_ENV'] = origNodeEnv
+    delete process.env['HUB_COOKIE_SECRET']
+  })
+
+  it('prod: throws when HUB_COOKIE_SECRET is blank', async () => {
+    process.env['NODE_ENV'] = 'production'
+    process.env['ANTHROPIC_API_KEY'] = 'test-key'
+    process.env['HUB_SKIP_DOTENV'] = '1'
+    process.env['HUB_UI_TOKEN'] = 'prod-token-xyz'
+    delete process.env['HUB_COOKIE_SECRET']
+    _resetEnvCache()
+    const { loadEnv } = await import('@hub/shared')
+    expect(() => loadEnv()).toThrow(/HUB_COOKIE_SECRET/)
+  })
+
+  it('prod: throws when HUB_COOKIE_SECRET equals HUB_UI_TOKEN', async () => {
+    process.env['NODE_ENV'] = 'production'
+    process.env['ANTHROPIC_API_KEY'] = 'test-key'
+    process.env['HUB_SKIP_DOTENV'] = '1'
+    process.env['HUB_UI_TOKEN'] = 'same-value'
+    process.env['HUB_COOKIE_SECRET'] = 'same-value'
+    _resetEnvCache()
+    const { loadEnv } = await import('@hub/shared')
+    expect(() => loadEnv()).toThrow(/differ/)
+  })
+
+  it('dev: blank HUB_COOKIE_SECRET gets a distinct fallback', async () => {
+    process.env['NODE_ENV'] = 'development'
+    process.env['ANTHROPIC_API_KEY'] = 'test-key'
+    process.env['HUB_SKIP_DOTENV'] = '1'
+    process.env['HUB_UI_TOKEN'] = 'dev-token'
+    delete process.env['HUB_COOKIE_SECRET']
+    _resetEnvCache()
+    const { loadEnv } = await import('@hub/shared')
+    const env = loadEnv()
+    expect(env.HUB_COOKIE_SECRET).not.toBe('')
+    expect(env.HUB_COOKIE_SECRET).not.toBe(env.HUB_UI_TOKEN)
+  })
+
+  it('prod: distinct values pass', async () => {
+    process.env['NODE_ENV'] = 'production'
+    process.env['ANTHROPIC_API_KEY'] = 'test-key'
+    process.env['HUB_SKIP_DOTENV'] = '1'
+    process.env['HUB_UI_TOKEN'] = 'ui-token-aaa'
+    process.env['HUB_COOKIE_SECRET'] = 'cookie-secret-bbb'
+    _resetEnvCache()
+    const { loadEnv } = await import('@hub/shared')
+    expect(() => loadEnv()).not.toThrow()
+  })
+})

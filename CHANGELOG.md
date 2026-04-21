@@ -30,6 +30,10 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 - `packages/shared/testing/vitest-sqlite-shim.ts`: single source for the `node:sqlite` / `node:test` Vite shim. `db`, `capture`, `agent-runtime`, and `server` vitest configs now import it instead of each carrying their own copy (~120 lines of duplication removed).
 
+### Security
+
+- `HUB_COOKIE_SECRET` and `HUB_UI_TOKEN` are now treated as distinct secrets. Prior behavior reused the bearer token as the cookie HMAC key whenever `HUB_COOKIE_SECRET` was blank, so a leak of one compromised both. `loadEnv()` now refuses to return with `NODE_ENV=production` unless `HUB_COOKIE_SECRET` is set AND differs from `HUB_UI_TOKEN`; dev-mode falls back to a derived-but-distinct secret and warns on stderr. `apps/server/src/auth.ts` dropped its `|| HUB_UI_TOKEN` fallback. `deploy/env.template` updated.
+
 ### Changed
 
 - `apps/server` dev loop now uses `tsup --watch --onSuccess` instead of `tsx watch`, which was silently swallowing `node:sqlite` imports under the repo's Node 24 + Windows arm64 combo. `pnpm dev:tsx` preserved as fallback.
