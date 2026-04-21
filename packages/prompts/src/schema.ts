@@ -34,6 +34,9 @@ export type TargetEntry = z.infer<typeof TargetEntry>
 /** One repo block in targets.yml. */
 export const RepoBlock = z.object({
   repo: z.string().min(1),
+  branch: z.string().optional(),
+  sensitivity: z.enum(['low', 'medium', 'high']).optional(),
+  enabled: z.boolean().optional(),
   targets: z.array(TargetEntry),
 })
 export type RepoBlock = z.infer<typeof RepoBlock>

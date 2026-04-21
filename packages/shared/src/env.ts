@@ -48,6 +48,8 @@ const EnvSchema = z.object({
   HUB_GITHUB_TOKEN: z.string().optional(),
   HUB_PROMPTS_REPO_URL: z.string().url().optional(),
   HUB_REGISTRY_REPO_URL: z.string().url().optional(),
+  HUB_GIT_AUTHOR_NAME: z.string().default('Hub'),
+  HUB_GIT_AUTHOR_EMAIL: z.string().default('hub@local'),
 
   // Server
   HUB_PORT: z.coerce.number().int().positive().default(4567),

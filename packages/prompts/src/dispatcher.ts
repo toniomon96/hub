@@ -7,7 +7,6 @@ import { getLogger } from '@hub/shared'
 import type { Task } from '@hub/shared'
 import { Parser, type Value } from 'expr-eval'
 import { handleOutputs } from './outputs.js'
-import { newId } from '@hub/shared'
 
 const log = getLogger('dispatcher')
 const exprParser = new Parser()
@@ -38,10 +37,10 @@ export type DispatchOpts = {
 export async function dispatchPromptRun(opts: DispatchOpts): Promise<{ runId: string }> {
   const db = getDb()
 
-  // Resolve prompt and target
+  // Resolve prompt and target — keep the loaded target object to avoid a second round-trip.
   let resolvedPromptId: string
   let resolvedRepo: string
-  let persistentTargetId: number | undefined
+  let persistentTarget: (typeof promptTargets)['$inferSelect'] | undefined
 
   if (opts.targetId !== undefined) {
     const target = await db
@@ -54,17 +53,16 @@ export async function dispatchPromptRun(opts: DispatchOpts): Promise<{ runId: st
     }
     resolvedPromptId = target.promptId
     resolvedRepo = opts.repo ?? target.repo
-    persistentTargetId = target.id
+    persistentTarget = target
   } else if (opts.promptId && opts.repo) {
     resolvedPromptId = opts.promptId
     resolvedRepo = opts.repo
     // Try to find a matching persistent target (optional)
-    const target = await db
+    persistentTarget = await db
       .select()
       .from(promptTargets)
       .where(and(eq(promptTargets.promptId, opts.promptId), eq(promptTargets.repo, opts.repo)))
       .get()
-    if (target) persistentTargetId = target.id
   } else {
     throw new Error('dispatchPromptRun requires either targetId or both promptId and repo')
   }
@@ -78,12 +76,6 @@ export async function dispatchPromptRun(opts: DispatchOpts): Promise<{ runId: st
   if (!prompt) {
     throw new Error(`Prompt "${resolvedPromptId}" not found`)
   }
-
-  // Load the persistent target if we have one (needed for when_expr etc.)
-  const persistentTarget =
-    persistentTargetId !== undefined
-      ? await db.select().from(promptTargets).where(eq(promptTargets.id, persistentTargetId)).get()
-      : undefined
 
   // Evaluate when_expr if present
   if (persistentTarget?.whenExpr) {
@@ -188,12 +180,12 @@ export async function dispatchPromptRun(opts: DispatchOpts): Promise<{ runId: st
     })
 
     // Update last_run on persistent target
-    if (persistentTargetId !== undefined) {
+    if (persistentTarget !== undefined) {
       const db2 = getDb()
       await db2
         .update(promptTargets)
         .set({ lastRunId: result.runId, lastRunAt: Date.now() })
-        .where(eq(promptTargets.id, persistentTargetId))
+        .where(eq(promptTargets.id, persistentTarget.id))
         .run()
     }
 

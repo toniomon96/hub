@@ -11,6 +11,7 @@ export default defineConfig({
     'src/outputs.ts',
     'src/dispatcher.ts',
     'src/schedule.ts',
+    'src/edit.ts',
   ],
   format: ['esm'],
   dts: true,

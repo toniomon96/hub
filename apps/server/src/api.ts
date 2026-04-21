@@ -566,6 +566,163 @@ api.openapi(promptRunRoute, async (c) => {
   }
 })
 
+// ──────────────────── Registry management routes ────────────────────────
+
+const EditResultSchema = z.object({
+  diff: z.string(),
+  committed: z.boolean(),
+  commitSha: z.string().optional(),
+  pushedTo: z.string().optional(),
+  syncSummary: z
+    .object({
+      promptsUpserted: z.number(),
+      targetsUpserted: z.number(),
+      targetsRemoved: z.number(),
+      errors: z.array(z.object({ file: z.string(), error: z.string() })),
+    })
+    .optional(),
+})
+
+const RegistryAddRequest = z.object({
+  repo: z.string().min(1),
+  branch: z.string().optional(),
+  sensitivity: z.enum(['low', 'medium', 'high']).optional(),
+  enabled: z.boolean().optional(),
+  dryRun: z.boolean().optional(),
+})
+
+const RegistryWireRequest = z.object({
+  repo: z.string().min(1),
+  promptId: z.string().min(1),
+  trigger: z.string().min(1),
+  when: z.string().optional(),
+  args: z.record(z.unknown()).optional(),
+  enabled: z.boolean().optional(),
+  dryRun: z.boolean().optional(),
+})
+
+const RegistryRemoveRequest = z.object({
+  repo: z.string().min(1),
+  promptId: z.string().optional(),
+  trigger: z.string().optional(),
+  dryRun: z.boolean().optional(),
+})
+
+const registryAddRoute = createRoute({
+  method: 'post',
+  path: '/registry/add',
+  request: { body: { content: json(RegistryAddRequest) } },
+  responses: {
+    200: { description: 'Edit applied', content: json(EditResultSchema) },
+    500: errorResp('Edit failed'),
+  },
+})
+
+api.openapi(registryAddRoute, async (c) => {
+  const body = c.req.valid('json')
+  try {
+    const { addTarget } = await import('@hub/prompts/edit')
+    const result = await addTarget(body)
+    return c.json(result, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'registry add failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
+const registryWireRoute = createRoute({
+  method: 'post',
+  path: '/registry/wire',
+  request: { body: { content: json(RegistryWireRequest) } },
+  responses: {
+    200: { description: 'Edit applied', content: json(EditResultSchema) },
+    500: errorResp('Edit failed'),
+  },
+})
+
+api.openapi(registryWireRoute, async (c) => {
+  const body = c.req.valid('json')
+  try {
+    const { wirePrompt } = await import('@hub/prompts/edit')
+    const result = await wirePrompt(body)
+    return c.json(result, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'registry wire failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
+const registryRemoveRoute = createRoute({
+  method: 'post',
+  path: '/registry/remove',
+  request: { body: { content: json(RegistryRemoveRequest) } },
+  responses: {
+    200: { description: 'Edit applied', content: json(EditResultSchema) },
+    500: errorResp('Edit failed'),
+  },
+})
+
+api.openapi(registryRemoveRoute, async (c) => {
+  const body = c.req.valid('json')
+  try {
+    const { removeEntry } = await import('@hub/prompts/edit')
+    const result = await removeEntry(body)
+    return c.json(result, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'registry remove failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
+const RegistryTargetsQuery = z.object({ repo: z.string().optional() })
+const RegistryTargetRow = z.object({
+  id: z.number(),
+  repo: z.string(),
+  promptId: z.string(),
+  trigger: z.string(),
+  enabled: z.number(),
+  lastRunAt: z.number().nullable(),
+})
+
+const registryTargetsRoute = createRoute({
+  method: 'get',
+  path: '/registry/targets',
+  request: { query: RegistryTargetsQuery },
+  responses: {
+    200: { description: 'Targets list', content: json(z.array(RegistryTargetRow)) },
+    500: errorResp('Query failed'),
+  },
+})
+
+api.openapi(registryTargetsRoute, async (c) => {
+  const { repo } = c.req.valid('query')
+  try {
+    const { promptTargets } = await import('@hub/db/schema')
+    const { eq: drizzleEq } = await import('drizzle-orm')
+    const db = getDb()
+    const rows = await db
+      .select({
+        id: promptTargets.id,
+        repo: promptTargets.repo,
+        promptId: promptTargets.promptId,
+        trigger: promptTargets.trigger,
+        enabled: promptTargets.enabled,
+        lastRunAt: promptTargets.lastRunAt,
+      })
+      .from(promptTargets)
+      .where(repo ? drizzleEq(promptTargets.repo, repo) : undefined)
+      .all()
+    return c.json(rows, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'registry targets query failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
 // ─────────────────── GET /api/openapi.json (spec) ──────────────────────
 // Served on the authenticated /api/* namespace so the spec is not public.
 // PR #2 (generated client) consumes this at build time.

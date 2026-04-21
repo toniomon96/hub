@@ -180,5 +180,113 @@ export function buildHubMcpServer(): McpServer {
     },
   )
 
+  // ── Registry management tools ────────────────────────────────────────────
+
+  server.tool(
+    'hub.registry.add',
+    `Add a repo to hub-registry so prompts can be wired to it.
+Re-running on an existing repo updates repo-level fields (branch, sensitivity, enabled) without touching existing prompt bindings.
+Use dryRun:true first when unsure — it returns the unified diff without committing.
+Example: { repo: "org/my-repo", sensitivity: "low", dryRun: true }`,
+    {
+      repo: z.string().min(1),
+      branch: z.string().optional(),
+      sensitivity: z.enum(['low', 'medium', 'high']).optional(),
+      enabled: z.boolean().optional(),
+      dryRun: z.boolean().optional(),
+    },
+    async (args) => {
+      try {
+        const { addTarget } = await import('@hub/prompts/edit')
+        const result = await addTarget(args)
+        return text(JSON.stringify(result, null, 2))
+      } catch (e) {
+        return err(e)
+      }
+    },
+  )
+
+  server.tool(
+    'hub.registry.wire',
+    `Wire a prompt to a repo with a trigger (cron:..., pr.opened, etc).
+Re-running with the same (repo, promptId, trigger) updates the binding — it is idempotent.
+Use dryRun:true to preview. Example: { repo: "org/my-repo", promptId: "daily-review", trigger: "cron:0 9 * * 1-5" }`,
+    {
+      repo: z.string().min(1),
+      promptId: z.string().min(1),
+      trigger: z.string().min(1),
+      when: z.string().optional(),
+      args: z.record(z.unknown()).optional(),
+      enabled: z.boolean().optional(),
+      dryRun: z.boolean().optional(),
+    },
+    async (args) => {
+      try {
+        const { wirePrompt } = await import('@hub/prompts/edit')
+        const result = await wirePrompt(args)
+        return text(JSON.stringify(result, null, 2))
+      } catch (e) {
+        return err(e)
+      }
+    },
+  )
+
+  server.tool(
+    'hub.registry.remove',
+    `Remove a repo block or a specific prompt binding from hub-registry.
+Omit promptId to remove the entire repo block. Supply promptId+trigger to remove only that binding. No-op if not found.
+Example: { repo: "org/my-repo", promptId: "daily-review", trigger: "cron:0 9 * * 1-5", dryRun: true }`,
+    {
+      repo: z.string().min(1),
+      promptId: z.string().optional(),
+      trigger: z.string().optional(),
+      dryRun: z.boolean().optional(),
+    },
+    async (args) => {
+      try {
+        const { removeEntry } = await import('@hub/prompts/edit')
+        const result = await removeEntry(args)
+        return text(JSON.stringify(result, null, 2))
+      } catch (e) {
+        return err(e)
+      }
+    },
+  )
+
+  server.tool(
+    'hub.registry.list',
+    `List prompt targets currently wired in the Hub DB (reflects last sync).
+Args for high-sensitivity prompts are redacted. Filter by repo: { repo: "org/my-repo" }.`,
+    { repo: z.string().optional() },
+    async ({ repo }) => {
+      try {
+        const db = getDb()
+        const rows = await db
+          .select({
+            id: promptTargets.id,
+            repo: promptTargets.repo,
+            promptId: promptTargets.promptId,
+            trigger: promptTargets.trigger,
+            enabled: promptTargets.enabled,
+            lastRunAt: promptTargets.lastRunAt,
+            args: promptTargets.args,
+            sensitivity: prompts.sensitivity,
+          })
+          .from(promptTargets)
+          .leftJoin(prompts, eq(promptTargets.promptId, prompts.id))
+          .all()
+
+        const filtered = repo ? rows.filter((r) => r.repo === repo) : rows
+        const out = filtered.map(({ sensitivity, ...r }) => ({
+          ...r,
+          args: sensitivity === 'high' ? '[redacted]' : r.args,
+        }))
+        return text(JSON.stringify(out, null, 2))
+      } catch (e) {
+        return err(e)
+      }
+    },
+  )
+
   return server
 }

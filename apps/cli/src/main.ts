@@ -3,7 +3,7 @@ import kleur from 'kleur'
 import { run } from '@hub/agent-runtime'
 import { getDb } from '@hub/db'
 import { runs, captures, agentLocks } from '@hub/db/schema'
-import { sql, desc, and, gte, eq } from 'drizzle-orm'
+import { sql, desc, and, gte, eq, like } from 'drizzle-orm'
 import { runDoctor, printDoctorReport } from './doctor.js'
 
 const program = new Command()
@@ -291,25 +291,213 @@ promptCmd
 
 promptCmd
   .command('schedule')
-  .description('Show registered cron prompt schedules')
+  .description('Show enabled cron prompt schedules from the DB')
   .action(async () => {
-    const { getScheduledJobs } = await import('@hub/prompts/schedule')
-    const { getDb: db } = await import('@hub/db')
     const { promptTargets } = await import('@hub/db/schema')
-    const jobs = getScheduledJobs()
-    if (!jobs.size) {
-      console.log(kleur.gray('no scheduled jobs registered'))
+    const db = getDb()
+    const cronTargets = await db
+      .select({
+        promptId: promptTargets.promptId,
+        repo: promptTargets.repo,
+        trigger: promptTargets.trigger,
+      })
+      .from(promptTargets)
+      .where(and(like(promptTargets.trigger, 'cron:%'), eq(promptTargets.enabled, 1)))
+      .all()
+    if (!cronTargets.length) {
+      console.log(kleur.gray('no scheduled cron targets configured'))
       return
     }
-    for (const [expr] of jobs) {
-      const targets = (
-        await db()
-          .select({ promptId: promptTargets.promptId, repo: promptTargets.repo })
-          .from(promptTargets)
-          .all()
-      ).filter((t) => t.repo && `cron:${expr}` === `cron:${expr}`)
+    const byExpr = new Map<string, Array<{ promptId: string; repo: string }>>()
+    for (const t of cronTargets) {
+      const expr = t.trigger.slice('cron:'.length)
+      const group = byExpr.get(expr) ?? []
+      group.push({ promptId: t.promptId, repo: t.repo })
+      byExpr.set(expr, group)
+    }
+    for (const [expr, targets] of byExpr) {
       console.log(kleur.cyan(expr))
       for (const t of targets) console.log(`  ${t.promptId} → ${t.repo}`)
+    }
+  })
+
+// ─── Registry management ────────────────────────────────────────────────────
+
+function parseKv(kv: string): [string, unknown] {
+  const eq = kv.indexOf('=')
+  if (eq < 0) throw new Error(`--arg must be key=value, got: ${kv}`)
+  const key = kv.slice(0, eq)
+  const raw = kv.slice(eq + 1)
+  try {
+    return [key, JSON.parse(raw)]
+  } catch {
+    return [key, raw]
+  }
+}
+
+function printDiff(diff: string): void {
+  if (!diff) {
+    console.log(kleur.gray('(no changes)'))
+    return
+  }
+  for (const line of diff.split('\n')) {
+    if (line.startsWith('+')) console.log(kleur.green(line))
+    else if (line.startsWith('-')) console.log(kleur.red(line))
+    else console.log(kleur.gray(line))
+  }
+}
+
+const registryCmd = new Command('registry').description('Registry management')
+program.addCommand(registryCmd)
+
+registryCmd
+  .command('add <repo>')
+  .description('Add a repo to the registry (or update its repo-level fields)')
+  .option('--sensitivity <level>', 'low | medium | high')
+  .option('--branch <name>', 'default branch', 'main')
+  .option('--dry-run', 'preview change without committing')
+  .action(
+    async (repo: string, opts: { sensitivity?: string; branch: string; dryRun?: boolean }) => {
+      const { addTarget } = await import('@hub/prompts/edit')
+      try {
+        const result = await addTarget({
+          repo,
+          branch: opts.branch,
+          ...(opts.sensitivity !== undefined
+            ? { sensitivity: opts.sensitivity as 'low' | 'medium' | 'high' }
+            : {}),
+          dryRun: opts.dryRun,
+        })
+        printDiff(result.diff)
+        if (result.committed) {
+          console.log(
+            kleur.green(`committed ${result.commitSha?.slice(0, 8)} → ${result.pushedTo}`),
+          )
+          if (result.syncSummary) {
+            console.log(
+              kleur.gray(
+                `synced: ${result.syncSummary.targetsUpserted} targets upserted, ${result.syncSummary.targetsRemoved} removed`,
+              ),
+            )
+          }
+        }
+      } catch (err) {
+        console.error(kleur.red('error:'), err instanceof Error ? err.message : String(err))
+        process.exit(2)
+      }
+    },
+  )
+
+registryCmd
+  .command('wire <repo> <promptId>')
+  .description('Wire a prompt to a repo with a trigger')
+  .requiredOption('--trigger <spec>', 'cron:... | pr.opened | etc')
+  .option('--when <expr>', 'when_expr filter expression')
+  .option('--arg <kv...>', 'key=value args (repeatable; value is JSON-coerced)')
+  .option('--dry-run', 'preview change without committing')
+  .action(
+    async (
+      repo: string,
+      promptId: string,
+      opts: { trigger: string; when?: string; arg?: string[]; dryRun?: boolean },
+    ) => {
+      const { wirePrompt } = await import('@hub/prompts/edit')
+      const args: Record<string, unknown> = {}
+      for (const kv of opts.arg ?? []) {
+        const [k, v] = parseKv(kv)
+        args[k] = v
+      }
+      try {
+        const result = await wirePrompt({
+          repo,
+          promptId,
+          trigger: opts.trigger,
+          ...(opts.when !== undefined ? { when: opts.when } : {}),
+          ...(Object.keys(args).length ? { args } : {}),
+          dryRun: opts.dryRun,
+        })
+        printDiff(result.diff)
+        if (result.committed) {
+          console.log(
+            kleur.green(`committed ${result.commitSha?.slice(0, 8)} → ${result.pushedTo}`),
+          )
+          if (result.syncSummary) {
+            console.log(
+              kleur.gray(
+                `synced: ${result.syncSummary.targetsUpserted} targets upserted, ${result.syncSummary.targetsRemoved} removed`,
+              ),
+            )
+          }
+        }
+      } catch (err) {
+        console.error(kleur.red('error:'), err instanceof Error ? err.message : String(err))
+        process.exit(2)
+      }
+    },
+  )
+
+registryCmd
+  .command('remove <repo>')
+  .description('Remove a repo block or a specific prompt binding')
+  .option('--prompt <id>', 'remove only this prompt binding')
+  .option('--trigger <spec>', 'with --prompt, remove only this specific trigger')
+  .option('--dry-run', 'preview change without committing')
+  .action(async (repo: string, opts: { prompt?: string; trigger?: string; dryRun?: boolean }) => {
+    const { removeEntry } = await import('@hub/prompts/edit')
+    try {
+      const result = await removeEntry({
+        repo,
+        ...(opts.prompt !== undefined ? { promptId: opts.prompt } : {}),
+        ...(opts.trigger !== undefined ? { trigger: opts.trigger } : {}),
+        dryRun: opts.dryRun,
+      })
+      printDiff(result.diff)
+      if (result.committed) {
+        console.log(kleur.green(`committed ${result.commitSha?.slice(0, 8)} → ${result.pushedTo}`))
+        if (result.syncSummary) {
+          console.log(
+            kleur.gray(
+              `synced: ${result.syncSummary.targetsUpserted} targets upserted, ${result.syncSummary.targetsRemoved} removed`,
+            ),
+          )
+        }
+      }
+    } catch (err) {
+      console.error(kleur.red('error:'), err instanceof Error ? err.message : String(err))
+      process.exit(2)
+    }
+  })
+
+registryCmd
+  .command('list')
+  .description('List prompt targets wired in the local DB')
+  .option('--repo <slug>', 'filter by repo slug')
+  .action(async (opts: { repo?: string }) => {
+    const { promptTargets, prompts } = await import('@hub/db/schema')
+    const db = getDb()
+    const rows = await db
+      .select({
+        repo: promptTargets.repo,
+        promptId: promptTargets.promptId,
+        trigger: promptTargets.trigger,
+        enabled: promptTargets.enabled,
+        lastRunAt: promptTargets.lastRunAt,
+        sensitivity: prompts.sensitivity,
+      })
+      .from(promptTargets)
+      .leftJoin(prompts, eq(promptTargets.promptId, prompts.id))
+      .all()
+    const filtered = opts.repo ? rows.filter((r) => r.repo === opts.repo) : rows
+    if (!filtered.length) {
+      console.log(kleur.gray('no targets'))
+      return
+    }
+    for (const r of filtered) {
+      const last = r.lastRunAt ? new Date(r.lastRunAt).toISOString() : 'never'
+      const enabledFlag = r.enabled ? '' : kleur.gray(' (disabled)')
+      console.log(
+        `  ${kleur.cyan(r.repo.padEnd(32))} ${r.promptId.padEnd(24)} ${r.trigger.padEnd(32)} last:${last}${enabledFlag}`,
+      )
     }
   })
 

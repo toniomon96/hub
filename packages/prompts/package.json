@@ -14,7 +14,8 @@
     "./sync": "./dist/sync.js",
     "./outputs": "./dist/outputs.js",
     "./dispatcher": "./dist/dispatcher.js",
-    "./schedule": "./dist/schedule.js"
+    "./schedule": "./dist/schedule.js",
+    "./edit": "./dist/edit.js"
   },
   "scripts": {
     "build": "tsup",

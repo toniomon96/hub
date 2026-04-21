@@ -197,6 +197,27 @@ function checkGitAvailable(): CheckResult {
   }
 }
 
+async function checkRegistryReachable(url: string, token?: string): Promise<CheckResult> {
+  const authUrl = token ? url.replace(/^(https?:\/\/)/, `$1oauth2:${token}@`) : url
+  const displayUrl = url
+  try {
+    execSync(`git ls-remote --heads "${authUrl}"`, { stdio: 'pipe', timeout: 5000 })
+    return {
+      name: 'registry repo reachable',
+      status: 'ok',
+      detail: `${displayUrl} (read access verified; push requires repo scope on token)`,
+      required: false,
+    }
+  } catch (err) {
+    return {
+      name: 'registry repo reachable',
+      status: 'fail',
+      detail: `${displayUrl}: ${err instanceof Error ? err.message.slice(0, 80) : String(err)}`,
+      required: false,
+    }
+  }
+}
+
 function symbol(s: CheckStatus): string {
   if (s === 'ok') return kleur.green('OK')
   if (s === 'fail') return kleur.red('FAIL')
@@ -223,6 +244,11 @@ export async function runDoctor(): Promise<{ results: CheckResult[]; ok: boolean
     results.push(optionalEnvCheck('prompts repo url', env.HUB_PROMPTS_REPO_URL))
     results.push(optionalEnvCheck('registry repo url', env.HUB_REGISTRY_REPO_URL))
     results.push(checkGitAvailable())
+    results.push(optionalEnvCheck('git author name', env.HUB_GIT_AUTHOR_NAME))
+    results.push(optionalEnvCheck('git author email', env.HUB_GIT_AUTHOR_EMAIL))
+    if (env.HUB_REGISTRY_REPO_URL) {
+      results.push(await checkRegistryReachable(env.HUB_REGISTRY_REPO_URL, env.HUB_GITHUB_TOKEN))
+    }
   }
 
   const ok = results.every((r) => !(r.required && r.status === 'fail'))
