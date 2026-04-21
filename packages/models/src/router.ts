@@ -1,23 +1,22 @@
 import { loadEnv, type Triage, type ModelSpec, type Task } from '@hub/shared'
 
 /**
- * MVP Router — minimal but real (LOAD-BEARING v0.3 fix #1).
+ * Router — full ARCHITECTURE.md §13 rule table. Rules are evaluated in order;
+ * first match wins. The privacy guarantee ("sensitivity=high never hits
+ * Anthropic") is enforced HERE with no fallback to a cloud classifier —
+ * sensitivity is regex-detected on the raw input before any model call.
  *
- * Four rules, evaluated in order. First match wins. The privacy guarantee
- * ("sensitivity=high never hits Anthropic") is enforced HERE, day one, with
- * no fallback to a cloud classifier — sensitivity is computed by regex on the
- * raw input string before any model call.
+ *   1. localOnly OR sensitivity=high    → Ollama (private SLM, Qwen3 7B)
+ *   2. complexity=trivial               → Ollama (trivial SLM, Phi-4-mini)
+ *   3. daily spend ≥ HUB_DAILY_USD_CAP  → Ollama (fallback SLM, Llama3.3)
+ *   4. complexity=complex               → Anthropic HUB_CLOUD_MODEL_COMPLEX
+ *                                         (defaults to HUB_DEFAULT_MODEL
+ *                                          so opt-in; Opus 4.5 recommended)
+ *   5. default                          → Anthropic HUB_DEFAULT_MODEL (Sonnet)
  *
- *   1. localOnly OR sensitivity=high  → local SLM (Qwen3 7B by default)
- *   2. complexity=trivial             → local SLM (Phi-4-mini)
- *   3. cost cap reached for today     → local SLM (fallback, Llama3.3)
- *   4. default                        → Anthropic Sonnet
- *
- * V1 expands to the full table from ARCHITECTURE.md §13.
- *
- * Critical invariant: NEVER call any cloud model (Anthropic/OpenAI/etc.)
- * before this router has classified the input. Tested via network mock in
- * tests/router.privacy.test.ts.
+ * Critical invariant: NEVER call any cloud model before this router has
+ * classified the input. Enforced by the property tests in
+ * `__tests__/router.fuzz.test.ts`.
  */
 
 export interface RouterDecision {
@@ -52,7 +51,7 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
 
   const triage: Triage = { sensitivity, complexity, domain, localOnly }
 
-  // 2. Apply rules in order.
+  // Rule 1: localOnly or sensitivity=high → private local SLM.
   if (localOnly) {
     return {
       triage,
@@ -64,6 +63,7 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
     }
   }
 
+  // Rule 2: trivial inputs go to the cheap local SLM.
   if (complexity === 'trivial') {
     return {
       triage,
@@ -75,8 +75,8 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
     }
   }
 
-  // 3. Cost ceiling — spend tracked today reached the cap.
-  //    Degrade silently to local fallback rather than failing the request.
+  // Rule 3: cost ceiling reached → degrade cloud routes to local fallback
+  // rather than failing the request.
   const spend = opts.todaySpendUsd ?? 0
   if (env.HUB_DAILY_USD_CAP > 0 && spend >= env.HUB_DAILY_USD_CAP) {
     return {
@@ -89,6 +89,20 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
     }
   }
 
+  // Rule 4: complex reasoning → opt-in Opus tier. `HUB_CLOUD_MODEL_COMPLEX`
+  // empty means the user hasn't opted in; fall through to Sonnet.
+  if (complexity === 'complex' && env.HUB_CLOUD_MODEL_COMPLEX.length > 0) {
+    return {
+      triage,
+      spec: {
+        provider: 'anthropic',
+        model: env.HUB_CLOUD_MODEL_COMPLEX,
+        reason: 'complexity=complex → cloud reasoning tier',
+      },
+    }
+  }
+
+  // Rule 5: default cloud route.
   return {
     triage,
     spec: {
@@ -126,25 +140,44 @@ export function detectSensitivity(input: string, patterns: string): 'low' | 'med
   return 'low'
 }
 
+const COMPLEX_IMPERATIVES =
+  /^(summarize|analyze|explain|compare|evaluate|design|plan|draft|refactor|architect|synthesize)\b/i
+
 /**
- * Heuristic complexity. Trivial = short, no question marks, no code fences,
- * no enumerations, single sentence. Everything else is moderate at MVP.
- * The 'complex' tier ships in V1 alongside the full router rule table.
+ * Heuristic complexity. Three tiers:
+ *
+ * - **trivial**: short (<60 chars), single sentence, no code fences, no
+ *   questions, no analytical imperative. Goes to Phi-4-mini.
+ * - **complex**: contains code fences OR a multi-step enumeration OR is
+ *   long (>400 chars) AND starts with an analytical imperative. Goes to
+ *   Opus when the user has opted in via HUB_CLOUD_MODEL_COMPLEX.
+ * - **moderate**: everything else. Goes to Sonnet by default.
  */
 export function detectComplexity(input: string): 'trivial' | 'moderate' | 'complex' {
   const trimmed = input.trim()
-  // Trivial: short imperative-style or simple statement. Tightened to 60 chars
-  // because longer prose is usually not trivial even if it parses as one sentence.
+
+  // Trivial first — tightest predicate.
   if (
     trimmed.length < 60 &&
     !trimmed.includes('```') &&
     !trimmed.includes('?') &&
     !/\n/.test(trimmed) &&
-    !/^(summarize|analyze|explain|compare|evaluate|design|plan|draft)\b/i.test(trimmed) &&
+    !COMPLEX_IMPERATIVES.test(trimmed) &&
     trimmed.split(/[.!]/).filter((s) => s.trim().length > 0).length <= 1
   ) {
     return 'trivial'
   }
+
+  // Complex: signals that the user wants deeper reasoning than chat.
+  const hasCodeFence = trimmed.includes('```')
+  const hasEnumeration = /(?:^|\n)\s*(?:\d+[.)]|[-*])\s+\S/m.test(trimmed)
+  const isLongAnalytical = trimmed.length > 400 && COMPLEX_IMPERATIVES.test(trimmed)
+  const multiQuestion = (trimmed.match(/\?/g) ?? []).length >= 2
+
+  if (hasCodeFence || hasEnumeration || isLongAnalytical || multiQuestion) {
+    return 'complex'
+  }
+
   return 'moderate'
 }
 

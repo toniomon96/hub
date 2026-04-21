@@ -44,13 +44,15 @@ You ──► CLI / PWA(V2) / Claude Desktop / Martin
 
 ## Privacy router (load-bearing)
 
-`packages/models/src/router.ts`. Three rules, first match wins:
+`packages/models/src/router.ts`. Five rules, first match wins:
 
-1. `localOnly OR sensitivity=high` → Ollama (Qwen3 7B)
-2. `complexity=trivial` → Ollama (Phi-4-mini)
-3. default → Anthropic Sonnet
+1. `localOnly OR sensitivity=high` → Ollama private (`HUB_LOCAL_MODEL_PRIVATE`, Qwen3 7B)
+2. `complexity=trivial` → Ollama trivial (`HUB_LOCAL_MODEL_TRIVIAL`, Phi-4-mini)
+3. `todaySpendUsd >= HUB_DAILY_USD_CAP` → Ollama fallback (`HUB_LOCAL_MODEL_FALLBACK`, Llama 3.3)
+4. `complexity=complex` AND `HUB_CLOUD_MODEL_COMPLEX` is set → Anthropic reasoning tier (opt-in Opus)
+5. default → Anthropic Sonnet (`HUB_DEFAULT_MODEL`)
 
-Sensitivity is regex-detected on raw input; `maxSensitivity` ensures caller-supplied triage cannot loosen the gate.
+Sensitivity is regex-detected on raw input; `maxSensitivity` ensures caller-supplied triage cannot loosen the gate. Property test at `router.fuzz.test.ts` asserts `sensitivity=high ⇒ vendor !== 'anthropic'` across 10,000 fuzzed samples.
 
 ## State layers
 
