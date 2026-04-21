@@ -9,6 +9,7 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 ### Added
 
+- **v0.5 #1: zod-openapi contracts.** All HTTP shapes live in `@hub/shared/contracts` (subpath export) as zod schemas. `apps/server/src/api.ts` is rewritten on `OpenAPIHono` + `createRoute`, and the server emits an OpenAPI 3.0 document at `GET /api/openapi.json` (gated by the `/api/*` auth middleware). PR #2 (generated web + CLI client) consumes this spec; until then, `apps/web/src/api.ts` keeps its hand-rolled types.
 - `apps/server/src/rate-limit.ts` grows a periodic `sweep()` + `startSweeper()` (unref'd hourly `setInterval`) that evicts client buckets whose attempts are all older than the long window. Prevents unbounded Map growth if an attacker rotates IPs. Called from the server bootstrap.
 - `@hub/shared/testing/test-env` exports `seedTestEnv()` + `restoreTestEnv()` — seeds the minimum env (`ANTHROPIC_API_KEY`, `HUB_SKIP_DOTENV=1`, `HUB_LOG_LEVEL=fatal`) every suite needs so `loadEnv()` doesn't throw in CI where no `.env` exists. Replaces scattered per-suite `process.env[...] = ...` blocks.
 - `HUB_MCP_STRICT` env flag (default `0`). When `1`, `buildMcpScopes()` filters out any MCP server whose stdio command+args (or HTTP URL) is not on the hardcoded allowlist in `packages/agent-runtime/src/mcp-config.ts`. In the default permissive mode, unknown servers are still spawned but logged at `warn`. Planned to flip default to `1` in v0.6.

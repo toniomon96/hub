@@ -22,6 +22,8 @@ export default defineConfig({
       '@hub/models/ollama': resolve(repoRoot, 'packages/models/src/ollama.ts'),
       '@hub/models/router': resolve(repoRoot, 'packages/models/src/router.ts'),
       '@hub/models': resolve(repoRoot, 'packages/models/src/index.ts'),
+      '@hub/shared/contracts': resolve(repoRoot, 'packages/shared/src/contracts/index.ts'),
+      '@hub/shared/testing/test-env': resolve(repoRoot, 'packages/shared/testing/test-env.ts'),
       '@hub/shared': resolve(repoRoot, 'packages/shared/src/index.ts'),
     },
   },
