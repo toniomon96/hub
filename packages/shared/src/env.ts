@@ -85,6 +85,13 @@ const EnvSchema = z.object({
   // the nightly 22:00 brief, 05:00 morning brief, Fri retro, Sun planning.
   // Defaults to '0' so dev/test never silently spend Anthropic credits.
   HUB_BRIEF_ENABLED: z.enum(['0', '1']).default('0'),
+
+  // MCP server allowlist enforcement. When '1', buildMcpScopes() filters out
+  // any server whose command+args (or HTTP URL) is not on the hardcoded
+  // allowlist in packages/agent-runtime/src/mcp-config.ts. When '0' (current
+  // default), the allowlist is advisory — unknown servers are permitted but
+  // logged. Plan: flip default to '1' in v0.6.
+  HUB_MCP_STRICT: z.enum(['0', '1']).default('0'),
 })
 
 export type Env = z.infer<typeof EnvSchema>
