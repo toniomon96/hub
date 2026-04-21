@@ -44,8 +44,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04, windows-latest]
         node: [22, 24]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -58,3 +59,32 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test
+
+  smoke-cli:
+    # Ubuntu-only smoke: build the CLI, migrate a tmp DB, run `hub doctor`.
+    # Catches wiring regressions (missing bin, ESM resolution, node:sqlite).
+    runs-on: ubuntu-24.04
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: hub migrate (tmp DB)
+        env:
+          ANTHROPIC_API_KEY: sk-ci-placeholder
+          HUB_DB_PATH: ${{ runner.temp }}/hub-ci.db
+          HUB_SKIP_DOTENV: '1'
+        run: pnpm hub migrate
+      - name: hub doctor
+        env:
+          ANTHROPIC_API_KEY: sk-ci-placeholder
+          HUB_DB_PATH: ${{ runner.temp }}/hub-ci.db
+          HUB_SKIP_DOTENV: '1'
+        run: pnpm hub doctor
