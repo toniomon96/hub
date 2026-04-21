@@ -10,6 +10,12 @@ Conventional Commits drive release notes; this file captures the human-facing su
 ### Added
 
 - Process bootstrap: issue + PR templates, Dependabot, split CI jobs, CodeQL + gitleaks + pnpm audit workflows, release workflow on tag, husky pre-commit/pre-push with lint-staged, `pnpm verify` one-shot gate.
+- `apps/server/src/__tests__/capture-ollama-mock.test.ts`: regression test pinning the apps/server → capture → classify → `@hub/models/ollama` import graph so mocks intercept across workspace boundaries.
+
+### Changed
+
+- `packages/capture/tsup.config.ts` sets `bundle: false` — each dist entry preserves its cross-package imports (notably `@hub/models/ollama`) rather than hoisting them into opaque shared chunks, keeping the classifier mockable from outside the package.
+- `apps/server/vitest.config.ts` aliases `@hub/capture/*` and `@hub/models/*` to their `src/*.ts` sources for tests, so Vite transforms the full import graph and `vi.mock()` intercepts at any hop.
 
 ### Changed
 
