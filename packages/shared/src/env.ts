@@ -57,6 +57,12 @@ const EnvSchema = z.object({
   NTFY_TOPIC: z.string().optional(),
   NTFY_URL: z.string().url().default('https://ntfy.sh'),
 
+  // Backups — optional monitoring of the nightly rclone-to-R2 job.
+  // When set, /healthz reports `backup.ok=false` if the newest file in this
+  // directory is older than HUB_BACKUP_MAX_AGE_H. Leave unset in dev.
+  HUB_BACKUP_DIR: z.string().optional(),
+  HUB_BACKUP_MAX_AGE_H: z.coerce.number().positive().default(26),
+
   // Privacy router (load-bearing: enforced from MVP day 1)
   HUB_SENSITIVITY_PATTERNS: z.string().default(''),
 
