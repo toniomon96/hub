@@ -136,3 +136,61 @@ describe('runBrief', () => {
     expect(opts.scopes).toEqual([])
   })
 })
+
+describe('dayStartMs (tz-aware day windows)', () => {
+  beforeEach(() => {
+    // Minimum env so loadEnv() doesn't choke if anything imports it during the
+    // test file; dayStartMs itself doesn't read env.
+    process.env['ANTHROPIC_API_KEY'] = 'test-key'
+    process.env['HUB_SKIP_DOTENV'] = '1'
+    _resetEnvCache()
+  })
+
+  it('UTC: date string maps to its own UTC midnight', async () => {
+    const { dayStartMs } = await import('../brief.js')
+    expect(dayStartMs('2026-04-20', 'UTC')).toBe(Date.parse('2026-04-20T00:00:00Z'))
+  })
+
+  it('America/Chicago: shifts by +5h (CDT) during summer', async () => {
+    const { dayStartMs } = await import('../brief.js')
+    // 2026-07-15 00:00 CDT = 2026-07-15T05:00:00Z
+    expect(dayStartMs('2026-07-15', 'America/Chicago')).toBe(Date.parse('2026-07-15T05:00:00Z'))
+  })
+
+  it('America/Chicago: shifts by +6h (CST) during winter', async () => {
+    const { dayStartMs } = await import('../brief.js')
+    // 2026-01-15 00:00 CST = 2026-01-15T06:00:00Z
+    expect(dayStartMs('2026-01-15', 'America/Chicago')).toBe(Date.parse('2026-01-15T06:00:00Z'))
+  })
+
+  it('Europe/Madrid: spring-forward day is 23h long end-to-end', async () => {
+    const { dayStartMs } = await import('../brief.js')
+    // Madrid DST starts 2026-03-29 (clocks jump 02:00 -> 03:00).
+    // Start of that day in Madrid = 2026-03-28T23:00:00Z (still CET, +1h).
+    // Start of next day in Madrid = 2026-03-29T22:00:00Z (now CEST, +2h).
+    // => Day is 23 hours, not 24.
+    const start = dayStartMs('2026-03-29', 'Europe/Madrid')
+    const end = dayStartMs('2026-03-30', 'Europe/Madrid')
+    expect(start).toBe(Date.parse('2026-03-28T23:00:00Z'))
+    expect(end).toBe(Date.parse('2026-03-29T22:00:00Z'))
+    expect(end - start).toBe(23 * 3600 * 1000)
+  })
+
+  it('Europe/Madrid: fall-back day is 25h long end-to-end', async () => {
+    const { dayStartMs } = await import('../brief.js')
+    // Madrid DST ends 2026-10-25 (clocks go 03:00 -> 02:00).
+    // Start of that day in Madrid = 2026-10-24T22:00:00Z (still CEST, +2h).
+    // Start of next day in Madrid = 2026-10-25T23:00:00Z (now CET, +1h).
+    // => Day is 25 hours.
+    const start = dayStartMs('2026-10-25', 'Europe/Madrid')
+    const end = dayStartMs('2026-10-26', 'Europe/Madrid')
+    expect(start).toBe(Date.parse('2026-10-24T22:00:00Z'))
+    expect(end).toBe(Date.parse('2026-10-25T23:00:00Z'))
+    expect(end - start).toBe(25 * 3600 * 1000)
+  })
+
+  it('invalid tz falls back to UTC midnight', async () => {
+    const { dayStartMs } = await import('../brief.js')
+    expect(dayStartMs('2026-04-20', 'Not/A_Zone')).toBe(Date.parse('2026-04-20T00:00:00Z'))
+  })
+})

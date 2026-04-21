@@ -44,7 +44,7 @@ const EnvSchema = z.object({
   // Server
   HUB_PORT: z.coerce.number().int().positive().default(4567),
   HUB_HOST: z.string().default('127.0.0.1'),
-  HUB_TIMEZONE: z.string().default('America/Chicago'),
+  HUB_TIMEZONE: z.string().default('UTC'),
 
   // DB
   HUB_DB_PATH: z.string().default('./data/hub.db'),

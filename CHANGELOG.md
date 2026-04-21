@@ -9,17 +9,7 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 ### Added
 
-- **v0.5 #1: zod-openapi contracts.** All HTTP shapes live in `@hub/shared/contracts` (subpath export) as zod schemas. `apps/server/src/api.ts` is rewritten on `OpenAPIHono` + `createRoute`, and the server emits an OpenAPI 3.0 document at `GET /api/openapi.json` (gated by the `/api/*` auth middleware). PR #2 (generated web + CLI client) consumes this spec; until then, `apps/web/src/api.ts` keeps its hand-rolled types.
-- `apps/server/src/rate-limit.ts` grows a periodic `sweep()` + `startSweeper()` (unref'd hourly `setInterval`) that evicts client buckets whose attempts are all older than the long window. Prevents unbounded Map growth if an attacker rotates IPs. Called from the server bootstrap.
-- `@hub/shared/testing/test-env` exports `seedTestEnv()` + `restoreTestEnv()` — seeds the minimum env (`ANTHROPIC_API_KEY`, `HUB_SKIP_DOTENV=1`, `HUB_LOG_LEVEL=fatal`) every suite needs so `loadEnv()` doesn't throw in CI where no `.env` exists. Replaces scattered per-suite `process.env[...] = ...` blocks.
-- `HUB_MCP_STRICT` env flag (default `0`). When `1`, `buildMcpScopes()` filters out any MCP server whose stdio command+args (or HTTP URL) is not on the hardcoded allowlist in `packages/agent-runtime/src/mcp-config.ts`. In the default permissive mode, unknown servers are still spawned but logged at `warn`. Planned to flip default to `1` in v0.6.
 - Process bootstrap: issue + PR templates, Dependabot, split CI jobs, CodeQL + gitleaks + pnpm audit workflows, release workflow on tag, husky pre-commit/pre-push with lint-staged, `pnpm verify` one-shot gate.
-- `apps/server/src/__tests__/capture-ollama-mock.test.ts`: regression test pinning the apps/server → capture → classify → `@hub/models/ollama` import graph so mocks intercept across workspace boundaries.
-
-### Changed
-
-- `packages/capture/tsup.config.ts` sets `bundle: false` — each dist entry preserves its cross-package imports (notably `@hub/models/ollama`) rather than hoisting them into opaque shared chunks, keeping the classifier mockable from outside the package.
-- `apps/server/vitest.config.ts` aliases `@hub/capture/*` and `@hub/models/*` to their `src/*.ts` sources for tests, so Vite transforms the full import graph and `vi.mock()` intercepts at any hop.
 
 ### Changed
 
@@ -34,17 +24,13 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 - `packages/shared/testing/vitest-sqlite-shim.ts`: single source for the `node:sqlite` / `node:test` Vite shim. `db`, `capture`, `agent-runtime`, and `server` vitest configs now import it instead of each carrying their own copy (~120 lines of duplication removed).
 
-### Security
+### Fixed
 
-- `HUB_COOKIE_SECRET` and `HUB_UI_TOKEN` are now treated as distinct secrets. Prior behavior reused the bearer token as the cookie HMAC key whenever `HUB_COOKIE_SECRET` was blank, so a leak of one compromised both. `loadEnv()` now refuses to return with `NODE_ENV=production` unless `HUB_COOKIE_SECRET` is set AND differs from `HUB_UI_TOKEN`; dev-mode falls back to a derived-but-distinct secret and warns on stderr. `apps/server/src/auth.ts` dropped its `|| HUB_UI_TOKEN` fallback. `deploy/env.template` updated.
+- `runBrief` day window is now evaluated in `HUB_TIMEZONE`, not UTC. Previous behavior silently dropped captures and runs whose `receivedAt`/`startedAt` fell into the tz-offset gap at either end of the local day. New `dayStartMs(date, tz)` handles DST transitions correctly (Europe/Madrid spring-forward = 23h, fall-back = 25h, both tested). `HUB_TIMEZONE` default changed from `America/Chicago` to `UTC` — `deploy/env.template` still sets `America/Chicago` explicitly for the VPS.
 
 ### Changed
 
-- `apps/server` dev loop now uses `tsup --watch --onSuccess` instead of `tsx watch`, which was silently swallowing `node:sqlite` imports under the repo's Node 24 + Windows arm64 combo. `pnpm dev:tsx` preserved as fallback.
-
-### Security
-
-- `/auth/login` is now rate-limited per client (5 failed attempts / minute, 20 failed attempts / hour, sliding window, in-process `Map`). Successful login clears the bucket. Returns `429` with `Retry-After` on block. Client key is derived from `x-forwarded-for` (cloudflared) then `cf-connecting-ip` then a shared `unknown` bucket. Closes a theoretical brute-force surface on the UI bearer token.
+- Documented the Drizzle-vs-raw-`node:sqlite` split in `DECISIONS.md` (2026-04-23) and cross-referenced from `ARCHITECTURE.md` and `packages/db/src/locks.ts`. Intent: make the mixed approach a durable, defensible decision instead of reading like half-finished cleanup.
 
 ## [0.3.0] — 2026-04-21
 
