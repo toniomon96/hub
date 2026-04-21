@@ -62,7 +62,7 @@ export async function runBrief(opts: BriefOptions = {}): Promise<BriefResult> {
     }
   }
 
-  const context = await gatherLocalContext(date)
+  const context = await gatherLocalContext(date, env.HUB_TIMEZONE)
   const skill = await loadSkillOrFallback()
   const prompt = buildBriefPrompt(date, context)
 
@@ -111,10 +111,13 @@ export interface BriefContext {
   todaySpendUsd: number
 }
 
-async function gatherLocalContext(date: string): Promise<BriefContext> {
+async function gatherLocalContext(date: string, tz: string): Promise<BriefContext> {
   const db = getDb()
-  const startOfDay = dayStartMs(date)
-  const endOfDay = startOfDay + 24 * 3600 * 1000
+  const startOfDay = dayStartMs(date, tz)
+  // Tomorrow's local midnight in UTC ms. Computed independently (not +24h)
+  // so DST transition days are handled correctly — Europe/Madrid spring-forward
+  // is 23h, fall-back is 25h.
+  const endOfDay = dayStartMs(nextDay(date), tz)
 
   const caps = await db
     .select({
@@ -326,8 +329,48 @@ export function todayInTz(tz: string): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-function dayStartMs(date: string): number {
-  // Interpret as UTC midnight; close enough for a day-window filter on a
-  // personal DB. If we need strict local-tz windows we'll revisit.
-  return Date.parse(`${date}T00:00:00Z`)
+/**
+ * UTC milliseconds at which local-midnight of `date` in `tz` occurs.
+ *
+ * Strategy: take UTC-midnight of the same YYYY-MM-DD as an initial guess,
+ * format it in `tz` via Intl, turn that wall-clock back into a UTC moment,
+ * and the signed delta is the tz offset at that instant. Handles DST because
+ * Intl knows the transition table — we only ever query midnight, which is
+ * never inside a spring-forward skipped hour or a fall-back repeated hour
+ * for any real IANA zone.
+ */
+export function dayStartMs(date: string, tz: string): number {
+  const utcGuess = Date.parse(`${date}T00:00:00Z`)
+  if (Number.isNaN(utcGuess)) return Date.now()
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(new Date(utcGuess))
+    const lookup = (t: string): number => Number(parts.find((p) => p.type === t)?.value)
+    const asTzWallClockUtcMs = Date.UTC(
+      lookup('year'),
+      lookup('month') - 1,
+      lookup('day'),
+      lookup('hour'),
+      lookup('minute'),
+      lookup('second'),
+    )
+    const offsetMs = asTzWallClockUtcMs - utcGuess
+    return utcGuess - offsetMs
+  } catch {
+    return utcGuess
+  }
+}
+
+function nextDay(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
 }
