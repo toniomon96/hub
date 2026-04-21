@@ -14,12 +14,15 @@ export interface NtfyMessage {
   topic?: string
 }
 
-/**
- * Post a notification to ntfy. No-op (logged at info) when NTFY_TOPIC is not
- * configured — alerting is opt-in. Never throws: alert delivery is best-effort.
- *
- * Server-side only. Don't use from the web UI.
- */
+export interface PublishNtfyMessage {
+  title?: string
+  message: string
+  /** ntfy priority 1 (min) … 5 (max). Omit for default (3). */
+  priority?: 1 | 2 | 3 | 4 | 5
+  tags?: string[]
+  clickUrl?: string
+}
+
 export async function notify(msg: NtfyMessage): Promise<{ sent: boolean; reason?: string }> {
   const env = loadEnv()
   const topic = msg.topic ?? env.NTFY_TOPIC
@@ -46,5 +49,39 @@ export async function notify(msg: NtfyMessage): Promise<{ sent: boolean; reason?
     const m = err instanceof Error ? err.message : String(err)
     log.warn({ err: m, url }, 'ntfy failed')
     return { sent: false, reason: m }
+  }
+}
+
+/**
+ * Publish a notification to the configured ntfy topic. Returns `false` when
+ * `NTFY_TOPIC` is unset (no-op — ntfy is optional infra) or on transport
+ * error; never throws. `fetchImpl` is injectable for tests.
+ */
+export async function publishNtfy(
+  msg: PublishNtfyMessage,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  const env = loadEnv()
+  if (!env.NTFY_TOPIC) return false
+
+  const url = `${env.NTFY_URL.replace(/\/+$/, '')}/${env.NTFY_TOPIC}`
+  const headers: Record<string, string> = {
+    'Content-Type': 'text/plain; charset=utf-8',
+  }
+  if (msg.title) headers['Title'] = msg.title
+  if (msg.priority) headers['Priority'] = String(msg.priority)
+  if (msg.tags?.length) headers['Tags'] = msg.tags.join(',')
+  if (msg.clickUrl) headers['Click'] = msg.clickUrl
+
+  try {
+    const res = await fetchImpl(url, { method: 'POST', headers, body: msg.message })
+    if (!res.ok) {
+      log.warn({ status: res.status, topic: env.NTFY_TOPIC }, 'ntfy publish non-200')
+      return false
+    }
+    return true
+  } catch (err) {
+    log.warn({ err: err instanceof Error ? err.message : String(err) }, 'ntfy publish failed')
+    return false
   }
 }
