@@ -1,10 +1,10 @@
 {
-  "name": "@hub/cli",
+  "name": "@hub/mcp",
   "version": "0.3.0",
   "private": true,
   "type": "module",
   "bin": {
-    "hub": "./dist/main.js"
+    "hub-mcp": "./dist/main.js"
   },
   "scripts": {
     "build": "tsup",
@@ -13,14 +13,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@hub/agent-runtime": "workspace:*",
-    "@hub/capture": "workspace:*",
     "@hub/db": "workspace:*",
     "@hub/prompts": "workspace:*",
     "@hub/shared": "workspace:*",
-    "commander": "^14.0.3",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "drizzle-orm": "^0.45.2",
-    "kleur": "^4.1.5"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "tsup": "^8.3.5",

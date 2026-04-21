@@ -1,6 +1,7 @@
 import { existsSync, accessSync, constants, mkdirSync, writeFileSync, unlinkSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
+import { execSync } from 'node:child_process'
 import kleur from 'kleur'
 import { loadEnv, type Env } from '@hub/shared'
 
@@ -182,6 +183,20 @@ function optionalEnvCheck(label: string, value: string | undefined): CheckResult
     : { name: label, status: 'skip', detail: 'not configured', required: false }
 }
 
+function checkGitAvailable(): CheckResult {
+  try {
+    const out = execSync('git --version', { stdio: 'pipe' }).toString().trim()
+    return { name: 'git binary', status: 'ok', detail: out, required: false }
+  } catch {
+    return {
+      name: 'git binary',
+      status: 'fail',
+      detail: 'not found on PATH — required for hub prompt sync',
+      required: false,
+    }
+  }
+}
+
 function symbol(s: CheckStatus): string {
   if (s === 'ok') return kleur.green('OK')
   if (s === 'fail') return kleur.red('FAIL')
@@ -204,6 +219,10 @@ export async function runDoctor(): Promise<{ results: CheckResult[]; ok: boolean
     results.push(optionalEnvCheck('obsidian api key', env.OBSIDIAN_API_KEY))
     results.push(optionalEnvCheck('todoist token', env.TODOIST_API_TOKEN))
     results.push(optionalEnvCheck('github pat', env.GITHUB_PAT))
+    results.push(optionalEnvCheck('hub github token', env.HUB_GITHUB_TOKEN))
+    results.push(optionalEnvCheck('prompts repo url', env.HUB_PROMPTS_REPO_URL))
+    results.push(optionalEnvCheck('registry repo url', env.HUB_REGISTRY_REPO_URL))
+    results.push(checkGitAvailable())
   }
 
   const ok = results.every((r) => !(r.required && r.status === 'fail'))

@@ -12,10 +12,15 @@ export interface RunStartArgs {
   permissionTier?: 'R0' | 'R1' | 'R2' | 'R3'
   mcpServers?: string[]
   subagents?: string[]
+  // Prompt orchestration context (null for non-prompt runs)
+  promptId?: string
+  promptVersion?: number
+  targetRepo?: string
+  runTrigger?: string
 }
 
 export interface RunFinishArgs {
-  status: 'success' | 'error' | 'partial'
+  status: 'success' | 'error' | 'partial' | 'skipped'
   inputTokens?: number
   outputTokens?: number
   costUsd?: number
@@ -39,6 +44,10 @@ export async function startRun(args: RunStartArgs): Promise<string> {
       mcpServersJson: JSON.stringify(args.mcpServers ?? []),
       subagentsJson: JSON.stringify(args.subagents ?? []),
       status: 'running',
+      promptId: args.promptId ?? null,
+      promptVersion: args.promptVersion ?? null,
+      targetRepo: args.targetRepo ?? null,
+      runTrigger: args.runTrigger ?? null,
     })
     .run()
   log.debug({ runId: id, agent: args.agentName }, 'run started')

@@ -3,7 +3,7 @@ import kleur from 'kleur'
 import { run } from '@hub/agent-runtime'
 import { getDb } from '@hub/db'
 import { runs, captures, agentLocks } from '@hub/db/schema'
-import { sql } from 'drizzle-orm'
+import { sql, desc, and, gte, eq } from 'drizzle-orm'
 import { runDoctor, printDoctorReport } from './doctor.js'
 
 const program = new Command()
@@ -153,6 +153,164 @@ program
     const text = parts.join(' ')
     const result = await ingest({ source: 'cli', text, rawContentRef: `cli:${Date.now()}` })
     console.log(kleur.cyan(result.isDuplicate ? `dup → ${result.id}` : `captured ${result.id}`))
+  })
+
+// ── hub prompt * ──────────────────────────────────────────────────────────────
+
+const promptCmd = new Command('prompt').description('Prompt orchestration')
+program.addCommand(promptCmd)
+
+promptCmd
+  .command('sync')
+  .description('Clone hub-prompts and hub-registry, upsert into DB')
+  .option('--branch <name>', 'branch to clone', 'main')
+  .action(async (opts: { branch: string }) => {
+    const { syncPrompts } = await import('@hub/prompts/sync')
+    const { registerScheduledPromptJobs } = await import('@hub/prompts/schedule')
+    const result = await syncPrompts({ branch: opts.branch })
+    console.log(
+      kleur.green(
+        `sync complete: ${result.promptsUpserted} prompts, ${result.targetsUpserted} targets (+${result.targetsRemoved} removed)`,
+      ),
+    )
+    if (result.errors.length) {
+      console.log(kleur.yellow(`parse errors:`))
+      for (const e of result.errors) console.log(`  ${e.file}: ${e.error}`)
+    }
+    await registerScheduledPromptJobs()
+  })
+
+promptCmd
+  .command('run <promptId> <repo>')
+  .description('Manually dispatch a prompt run')
+  .option('--branch <name>', 'target repo branch', 'main')
+  .option('--arg <kv...>', 'key=value args (repeatable)')
+  .action(async (promptId: string, repo: string, opts: { branch: string; arg?: string[] }) => {
+    const { dispatchPromptRun } = await import('@hub/prompts/dispatcher')
+    const args: Record<string, string> = {}
+    for (const kv of opts.arg ?? []) {
+      const [k, ...rest] = kv.split('=')
+      if (k) args[k] = rest.join('=')
+    }
+    const result = await dispatchPromptRun({
+      promptId,
+      repo,
+      branch: opts.branch,
+      args,
+      trigger: 'manual',
+    })
+    console.log(kleur.cyan(`run ${result.runId}`))
+  })
+
+promptCmd
+  .command('list')
+  .description('List synced prompts')
+  .action(async () => {
+    const { getDb: db } = await import('@hub/db')
+    const { prompts } = await import('@hub/db/schema')
+    const rows = await db()
+      .select({
+        id: prompts.id,
+        version: prompts.version,
+        title: prompts.title,
+        sensitivity: prompts.sensitivity,
+        complexity: prompts.complexity,
+      })
+      .from(prompts)
+      .all()
+    if (!rows.length) {
+      console.log(kleur.gray('no prompts synced'))
+      return
+    }
+    for (const r of rows) {
+      console.log(
+        `  ${kleur.cyan(r.id.padEnd(32))} v${r.version}  ${r.sensitivity.padEnd(8)} ${r.complexity.padEnd(10)}  ${r.title}`,
+      )
+    }
+  })
+
+promptCmd
+  .command('targets')
+  .description('List prompt targets')
+  .option('--repo <slug>', 'filter by repo')
+  .action(async (opts: { repo?: string }) => {
+    const { getDb: db } = await import('@hub/db')
+    const { promptTargets } = await import('@hub/db/schema')
+    const allTargets = await db().select().from(promptTargets).all()
+    const filtered = opts.repo ? allTargets.filter((t) => t.repo === opts.repo) : allTargets
+    if (!filtered.length) {
+      console.log(kleur.gray('no targets'))
+      return
+    }
+    for (const t of filtered) {
+      const last = t.lastRunAt ? new Date(t.lastRunAt).toISOString() : 'never'
+      console.log(
+        `  ${kleur.cyan(t.repo.padEnd(32))} ${t.promptId.padEnd(24)} ${t.trigger.padEnd(32)} last:${last}`,
+      )
+    }
+  })
+
+promptCmd
+  .command('results')
+  .description('Show prompt run history')
+  .option('--repo <slug>', 'filter by target repo')
+  .option('--prompt-id <id>', 'filter by prompt id')
+  .option('--since <iso>', 'only show runs after this ISO date')
+  .option('--limit <n>', 'max rows', '20')
+  .action(async (opts: { repo?: string; promptId?: string; since?: string; limit: string }) => {
+    const db = getDb()
+    const limit = parseInt(opts.limit, 10)
+    const conditions = [sql`${runs.promptId} IS NOT NULL`]
+    if (opts.repo) conditions.push(eq(runs.targetRepo, opts.repo))
+    if (opts.promptId) conditions.push(eq(runs.promptId, opts.promptId))
+    if (opts.since) conditions.push(gte(runs.startedAt, new Date(opts.since).getTime()))
+    const rows = await db
+      .select({
+        id: runs.id,
+        promptId: runs.promptId,
+        targetRepo: runs.targetRepo,
+        status: runs.status,
+        startedAt: runs.startedAt,
+      })
+      .from(runs)
+      .where(and(...conditions))
+      .orderBy(desc(runs.startedAt))
+      .limit(limit)
+      .all()
+    if (!rows.length) {
+      console.log(kleur.gray('no results'))
+      return
+    }
+    for (const r of rows) {
+      const when = new Date(r.startedAt).toISOString()
+      console.log(
+        `  ${kleur.gray(when)}  ${(r.promptId ?? '').padEnd(24)}  ${(r.targetRepo ?? '').padEnd(24)}  ${r.status}  ${r.id}`,
+      )
+    }
+  })
+
+promptCmd
+  .command('schedule')
+  .description('Show registered cron prompt schedules')
+  .action(async () => {
+    const { getScheduledJobs } = await import('@hub/prompts/schedule')
+    const { getDb: db } = await import('@hub/db')
+    const { promptTargets } = await import('@hub/db/schema')
+    const jobs = getScheduledJobs()
+    if (!jobs.size) {
+      console.log(kleur.gray('no scheduled jobs registered'))
+      return
+    }
+    for (const [expr] of jobs) {
+      const targets = (
+        await db()
+          .select({ promptId: promptTargets.promptId, repo: promptTargets.repo })
+          .from(promptTargets)
+          .all()
+      ).filter((t) => t.repo && `cron:${expr}` === `cron:${expr}`)
+      console.log(kleur.cyan(expr))
+      for (const t of targets) console.log(`  ${t.promptId} → ${t.repo}`)
+    }
   })
 
 program.parseAsync().catch((err) => {

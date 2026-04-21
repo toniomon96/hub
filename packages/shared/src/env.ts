@@ -44,6 +44,10 @@ const EnvSchema = z.object({
 
   // GitHub
   GITHUB_PAT: z.string().optional(),
+  // Prompt orchestration — private repo access for hub-prompts + hub-registry
+  HUB_GITHUB_TOKEN: z.string().optional(),
+  HUB_PROMPTS_REPO_URL: z.string().url().optional(),
+  HUB_REGISTRY_REPO_URL: z.string().url().optional(),
 
   // Server
   HUB_PORT: z.coerce.number().int().positive().default(4567),

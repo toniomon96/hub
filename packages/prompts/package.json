@@ -1,0 +1,44 @@
+{
+  "name": "@hub/prompts",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./schema": "./dist/schema.js",
+    "./parser": "./dist/parser.js",
+    "./registry": "./dist/registry.js",
+    "./git": "./dist/git.js",
+    "./sync": "./dist/sync.js",
+    "./outputs": "./dist/outputs.js",
+    "./dispatcher": "./dist/dispatcher.js",
+    "./schedule": "./dist/schedule.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@hub/db": "workspace:*",
+    "@hub/agent-runtime": "workspace:*",
+    "@hub/shared": "workspace:*",
+    "@octokit/rest": "^20.1.1",
+    "drizzle-orm": "^0.45.2",
+    "expr-eval": "^2.0.2",
+    "gray-matter": "^4.0.3",
+    "node-cron": "^3.0.3",
+    "simple-git": "^3.27.0",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@hub/shared": "workspace:*",
+    "@types/node-cron": "^3.0.11",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

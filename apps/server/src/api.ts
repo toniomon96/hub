@@ -483,6 +483,89 @@ api.openapi(settingsRoute, (c) => {
   )
 })
 
+// ─────────────────── POST /api/prompts/sync ─────────────────────────────
+
+const PromptSyncResponse = z.object({
+  promptsUpserted: z.number(),
+  targetsUpserted: z.number(),
+  targetsRemoved: z.number(),
+  errors: z.array(z.object({ file: z.string(), error: z.string() })),
+})
+
+const promptSyncRoute = createRoute({
+  method: 'post',
+  path: '/prompts/sync',
+  responses: {
+    200: {
+      description: 'Sync complete',
+      content: { 'application/json': { schema: PromptSyncResponse } },
+    },
+    500: { description: 'Sync failed', content: { 'application/json': { schema: ErrorEnvelope } } },
+  },
+})
+
+api.openapi(promptSyncRoute, async (c) => {
+  try {
+    const { syncPrompts } = await import('@hub/prompts/sync')
+    const { registerScheduledPromptJobs } = await import('@hub/prompts/schedule')
+    const result = await syncPrompts()
+    await registerScheduledPromptJobs()
+    return c.json(result, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'prompts sync failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
+// ─────────────────── POST /api/prompts/run ──────────────────────────────
+
+const PromptRunRequest = z.object({
+  promptId: z.string().min(1),
+  repo: z.string().min(1),
+  branch: z.string().optional(),
+  args: z.record(z.unknown()).optional(),
+})
+
+const PromptRunResponse = z.object({
+  runId: z.string(),
+})
+
+const promptRunRoute = createRoute({
+  method: 'post',
+  path: '/prompts/run',
+  request: { body: { content: { 'application/json': { schema: PromptRunRequest } } } },
+  responses: {
+    200: {
+      description: 'Dispatch triggered',
+      content: { 'application/json': { schema: PromptRunResponse } },
+    },
+    500: {
+      description: 'Dispatch failed',
+      content: { 'application/json': { schema: ErrorEnvelope } },
+    },
+  },
+})
+
+api.openapi(promptRunRoute, async (c) => {
+  const body = c.req.valid('json')
+  try {
+    const { dispatchPromptRun } = await import('@hub/prompts/dispatcher')
+    const result = await dispatchPromptRun({
+      promptId: body.promptId,
+      repo: body.repo,
+      ...(body.branch !== undefined ? { branch: body.branch } : {}),
+      ...(body.args !== undefined ? { args: body.args } : {}),
+      trigger: 'manual',
+    })
+    return c.json(result, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'prompt run dispatch failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
 // ─────────────────── GET /api/openapi.json (spec) ──────────────────────
 // Served on the authenticated /api/* namespace so the spec is not public.
 // PR #2 (generated client) consumes this at build time.
