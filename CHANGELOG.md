@@ -32,6 +32,10 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 - Documented the Drizzle-vs-raw-`node:sqlite` split in `DECISIONS.md` (2026-04-23) and cross-referenced from `ARCHITECTURE.md` and `packages/db/src/locks.ts`. Intent: make the mixed approach a durable, defensible decision instead of reading like half-finished cleanup.
 
+### Security
+
+- `/webhooks/*` now supports per-vendor signature schemes. Set `HUB_WEBHOOK_SECRET_GRANOLA`, `HUB_WEBHOOK_SECRET_PLAUD`, and/or `HUB_WEBHOOK_SECRET_MARTIN` to opt that source into its stricter scheme: Granola and Martin verify HMAC-SHA256 of the raw body (`x-granola-signature: sha256=<hex>` / `x-martin-signature: sha256=<hex>`), Plaud verifies a bearer token in `Authorization`. Sources with no per-vendor env var set keep accepting the legacy `x-hub-secret` + `HUB_WEBHOOK_SECRET` path so existing deployments don't break; `superwhisper` and `manual` stay on the legacy scheme permanently.
+
 ## [0.3.0] — 2026-04-21
 
 ### Added

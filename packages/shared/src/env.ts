@@ -70,6 +70,15 @@ const EnvSchema = z.object({
   // refuse all traffic. Dev/test can set any value. 32+ random bytes in prod.
   HUB_WEBHOOK_SECRET: z.string().default(''),
 
+  // Per-vendor webhook secrets. When set, override HUB_WEBHOOK_SECRET for
+  // that source. See apps/server/src/webhooks.ts for the scheme each one uses:
+  //   - Granola: HMAC-SHA256 of raw body, verified against x-granola-signature
+  //   - Plaud:   bearer token, presented as `Authorization: Bearer <token>`
+  //   - Martin:  HMAC-SHA256 of raw body, verified against x-martin-signature
+  HUB_WEBHOOK_SECRET_GRANOLA: z.string().default(''),
+  HUB_WEBHOOK_SECRET_PLAUD: z.string().default(''),
+  HUB_WEBHOOK_SECRET_MARTIN: z.string().default(''),
+
   // Browser UI shared token. Gates /api/* via header or signed cookie.
   // Empty => UI cannot authenticate; /api/* still accepts x-hub-secret for
   // the CLI/tools. Generate 32+ random bytes for prod.
