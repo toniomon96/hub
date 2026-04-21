@@ -27,29 +27,66 @@ const REDACT_PATHS = [
 
 let rootLogger: Logger | undefined
 
-export function getLogger(component?: string): Logger {
-  if (!rootLogger) {
-    const env = loadEnv()
-    mkdirSync(env.HUB_LOG_DIR, { recursive: true })
-    const date = new Date().toISOString().slice(0, 10)
-    const logFile = join(env.HUB_LOG_DIR, `${date}.log`)
+function buildRoot(): Logger {
+  const env = loadEnv()
+  mkdirSync(env.HUB_LOG_DIR, { recursive: true })
+  const date = new Date().toISOString().slice(0, 10)
+  const logFile = join(env.HUB_LOG_DIR, `${date}.log`)
 
-    const opts: LoggerOptions = {
-      level: env.HUB_LOG_LEVEL,
-      redact: { paths: REDACT_PATHS, remove: false, censor: '[REDACTED]' },
-      base: { pid: process.pid },
-      timestamp: pino.stdTimeFunctions.isoTime,
-    }
-
-    rootLogger = pino(
-      opts,
-      pino.multistream([
-        { level: env.HUB_LOG_LEVEL, stream: createWriteStream(logFile, { flags: 'a' }) },
-        { level: env.HUB_LOG_LEVEL, stream: process.stderr },
-      ]),
-    )
+  const opts: LoggerOptions = {
+    level: env.HUB_LOG_LEVEL,
+    redact: { paths: REDACT_PATHS, remove: false, censor: '[REDACTED]' },
+    base: { pid: process.pid },
+    timestamp: pino.stdTimeFunctions.isoTime,
   }
-  return component ? rootLogger.child({ component }) : rootLogger
+
+  return pino(
+    opts,
+    pino.multistream([
+      { level: env.HUB_LOG_LEVEL, stream: createWriteStream(logFile, { flags: 'a' }) },
+      { level: env.HUB_LOG_LEVEL, stream: process.stderr },
+    ]),
+  )
+}
+
+function resolveRoot(): Logger {
+  if (!rootLogger) rootLogger = buildRoot()
+  return rootLogger
+}
+
+/**
+ * Returns a Logger-shaped proxy that defers `loadEnv()` and pino construction
+ * until the first property access. Safe to assign at module top level — tests
+ * can import modules that hold `const log = getLogger('x')` without first
+ * seeding the env schema, which was the whole reason the v0.3 test suite
+ * needed `_resetEnvCache()` gymnastics.
+ */
+export function getLogger(component?: string): Logger {
+  let resolved: Logger | undefined
+  const resolve = (): Logger => {
+    if (!resolved) {
+      resolved = component ? resolveRoot().child({ component }) : resolveRoot()
+    }
+    return resolved
+  }
+  return new Proxy({} as Logger, {
+    get(_target, prop, receiver) {
+      const real = resolve() as unknown as Record<string | symbol, unknown>
+      const value = real[prop]
+      if (typeof value === 'function') {
+        return (value as (...args: unknown[]) => unknown).bind(real)
+      }
+      return Reflect.get(real as object, prop, receiver)
+    },
+    has(_target, prop) {
+      return prop in (resolve() as unknown as object)
+    },
+  })
+}
+
+/** Test hook: force the root logger to be rebuilt on next use. */
+export function _resetLoggerCache(): void {
+  rootLogger = undefined
 }
 
 /**

@@ -10,6 +10,10 @@ Conventional Commits drive release notes; this file captures the human-facing su
 ### Added
 
 - Process bootstrap: issue + PR templates, Dependabot, split CI jobs, CodeQL + gitleaks + pnpm audit workflows, release workflow on tag, husky pre-commit/pre-push with lint-staged, `pnpm verify` one-shot gate.
+
+### Changed
+
+- `getLogger()` is now lazy: returns a proxy that defers `loadEnv()` + pino construction to first property access, so modules can hold `const log = getLogger('x')` at top level without making tests pay the env-schema cost at import time. New `_resetLoggerCache()` hook for tests that re-seed env.
 - CI: build-test matrix extended to `{ubuntu-24.04, windows-latest} × {Node 22, 24}`; new `smoke-cli` job runs `hub migrate` + `hub doctor` against a tmp DB to catch ESM/`node:sqlite` wiring regressions.
 
 ### Changed
