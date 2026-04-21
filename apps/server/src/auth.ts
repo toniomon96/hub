@@ -2,6 +2,7 @@ import type { Context, MiddlewareHandler } from 'hono'
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie'
 import { timingSafeEqual, createHmac, randomBytes } from 'node:crypto'
 import { loadEnv, getLogger } from '@hub/shared'
+import { check as rateCheck, recordFailure, clear as rateClear } from './rate-limit.js'
 
 const log = getLogger('auth')
 
@@ -126,16 +127,54 @@ export function loginHandler(): (c: Context) => Promise<Response> {
     if (!env.HUB_UI_TOKEN) {
       return c.json({ error: 'ui_not_configured' }, 503)
     }
+
+    const key = clientKey(c)
+    const pre = rateCheck(key)
+    if (!pre.allowed) {
+      log.warn({ key, retryAfterSec: pre.retryAfterSec }, 'login rate-limited')
+      c.header('retry-after', String(pre.retryAfterSec))
+      return c.json({ error: 'rate_limited', retryAfterSec: pre.retryAfterSec }, 429)
+    }
+
     const body = (await c.req.json().catch(() => null)) as { token?: string } | null
     const token = body?.token ?? ''
     if (!verifyHeaderToken(token)) {
-      log.warn('login rejected')
+      const post = recordFailure(key)
+      log.warn(
+        { key, remainingShort: post.remainingShort, remainingLong: post.remainingLong },
+        'login rejected',
+      )
+      // Return 401 for THIS attempt even if it was the one that tripped the
+      // limit; the next pre-check will produce 429. This keeps the response
+      // code truthful about what happened with the credential presented.
       return c.json({ error: 'unauthorized' }, 401)
     }
+
+    // Success: drop the client's failed-attempt history so a brute-force
+    // streak doesn't leave them rate-limited after they finally get it right.
+    rateClear(key)
     const value = issueCookieValue()
     setSessionCookie(c, value, COOKIE_MAX_AGE_SEC)
     return c.json({ ok: true })
   }
+}
+
+/**
+ * Best-effort client identifier for rate limiting. Prefers the leftmost
+ * entry of `x-forwarded-for` (cloudflared sets this), then cf-connecting-ip,
+ * then the raw socket if the Node adapter exposes it. Falls back to a
+ * shared "unknown" bucket — safer to rate-limit anonymous traffic together
+ * than to skip the check entirely.
+ */
+function clientKey(c: Context): string {
+  const xff = c.req.header('x-forwarded-for')
+  if (xff) {
+    const first = xff.split(',')[0]?.trim()
+    if (first) return `ip:${first}`
+  }
+  const cf = c.req.header('cf-connecting-ip')
+  if (cf) return `ip:${cf.trim()}`
+  return 'ip:unknown'
 }
 
 export function logoutHandler(): (c: Context) => Promise<Response> {

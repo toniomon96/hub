@@ -38,6 +38,10 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 - `apps/server` dev loop now uses `tsup --watch --onSuccess` instead of `tsx watch`, which was silently swallowing `node:sqlite` imports under the repo's Node 24 + Windows arm64 combo. `pnpm dev:tsx` preserved as fallback.
 
+### Security
+
+- `/auth/login` is now rate-limited per client (5 failed attempts / minute, 20 failed attempts / hour, sliding window, in-process `Map`). Successful login clears the bucket. Returns `429` with `Retry-After` on block. Client key is derived from `x-forwarded-for` (cloudflared) then `cf-connecting-ip` then a shared `unknown` bucket. Closes a theoretical brute-force surface on the UI bearer token.
+
 ## [0.3.0] — 2026-04-21
 
 ### Added
