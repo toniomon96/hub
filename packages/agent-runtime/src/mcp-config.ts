@@ -1,4 +1,6 @@
-import { loadEnv } from '@hub/shared'
+import { loadEnv, getLogger } from '@hub/shared'
+
+const log = getLogger('mcp-config')
 
 /**
  * MCP server configurations grouped by capability scope.
@@ -107,5 +109,61 @@ export function buildMcpScopes(): McpScopes {
     args: ['-y', '@wonderwhy-er/desktop-commander'],
   })
 
-  return scopes
+  return enforceAllowlist(scopes, env.HUB_MCP_STRICT === '1')
+}
+
+/**
+ * Allowlist of MCP servers we know how to vouch for. Each entry is a predicate
+ * on `McpServerCfg`. A server passes if at least one predicate returns true.
+ *
+ * Why a predicate list and not just a Set of commands: some servers (Todoist)
+ * invoke a user-controlled node script path, and we want to allow any
+ * .js/.mjs/.cjs file the operator configured via TODOIST_MCP_PATH — not a
+ * wildcard `node *`.
+ */
+const ALLOWLIST: Array<(cfg: McpServerCfg) => boolean> = [
+  // Notion
+  (c) =>
+    c.type === 'stdio' && c.command === 'npx' && c.args.includes('@notionhq/notion-mcp-server'),
+  // Obsidian
+  (c) => c.type === 'stdio' && c.command === 'npx' && c.args.includes('obsidian-mcp-server'),
+  // Google Workspace
+  (c) => c.type === 'stdio' && c.command === 'uvx' && c.args.includes('workspace-mcp'),
+  // Todoist — user-configured node script (must end in .js/.mjs/.cjs)
+  (c) =>
+    c.type === 'stdio' &&
+    c.command === 'node' &&
+    c.args.length === 1 &&
+    /\.(m|c)?js$/.test(c.args[0] ?? ''),
+  // Desktop Commander
+  (c) =>
+    c.type === 'stdio' && c.command === 'npx' && c.args.includes('@wonderwhy-er/desktop-commander'),
+  // GitHub Copilot MCP (HTTP)
+  (c) => c.type === 'http' && c.url === 'https://api.githubcopilot.com/mcp/',
+]
+
+/**
+ * Apply the allowlist to each scope. In strict mode, drop disallowed servers.
+ * In non-strict mode, log a warning and keep them. Returning the filtered
+ * scopes either way keeps call sites identical.
+ */
+export function enforceAllowlist(scopes: McpScopes, strict: boolean): McpScopes {
+  const out: McpScopes = { knowledge: [], workspace: [], tasks: [], code: [], system: [] }
+  for (const name of Object.keys(scopes) as McpScopeName[]) {
+    for (const cfg of scopes[name]) {
+      const allowed = ALLOWLIST.some((p) => p(cfg))
+      if (allowed) {
+        out[name].push(cfg)
+        continue
+      }
+      const desc = cfg.type === 'stdio' ? `${cfg.command} ${cfg.args.join(' ')}` : cfg.url
+      if (strict) {
+        log.warn({ scope: name, cfg: desc }, 'mcp server rejected by allowlist (strict)')
+      } else {
+        log.warn({ scope: name, cfg: desc }, 'mcp server not on allowlist (permissive)')
+        out[name].push(cfg)
+      }
+    }
+  }
+  return out
 }
