@@ -1,20 +1,57 @@
-import { Hono } from 'hono'
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { sql } from 'drizzle-orm'
 import { readFile } from 'node:fs/promises'
 import { getDb } from '@hub/db'
 import { runs, captures, agentLocks, briefings } from '@hub/db/schema'
 import { getLogger, loadEnv } from '@hub/shared'
+import {
+  ErrorEnvelope,
+  StatusResponse,
+  CapturesList,
+  CaptureDetail,
+  CaptureCreateRequest,
+  CaptureCreateResponse,
+  RunDetail,
+  BriefingsList,
+  BriefingDetail,
+  AskRequest,
+  AskResponse,
+  Settings,
+} from '@hub/shared/contracts'
 
 const log = getLogger('api')
 
-export const api = new Hono()
-
 /**
- * GET /api/status
- * Returns DB counts, active leases, and the 20 most recent runs.
- * Matches the `hub status` CLI command so the UI and CLI agree.
+ * Typed API surface. Every route is declared with `createRoute` so:
+ *   1. request/response shapes are validated by zod,
+ *   2. TS inference flows from contracts → handler,
+ *   3. the server emits an OpenAPI document at `/api/openapi.json` that
+ *      the web/CLI clients consume in v0.5 #2.
  */
-api.get('/status', async (c) => {
+export const api = new OpenAPIHono()
+
+const json = <S extends z.ZodTypeAny>(schema: S) => ({
+  'application/json': { schema },
+})
+
+const errorResp = (description: string) => ({
+  description,
+  content: json(ErrorEnvelope),
+})
+
+const IdParam = z.object({ id: z.string().min(1) })
+const DateParam = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) })
+
+// ─────────────────────────── GET /api/status ────────────────────────────
+const statusRoute = createRoute({
+  method: 'get',
+  path: '/status',
+  responses: {
+    200: { description: 'Counts + leases + 20 most recent runs', content: json(StatusResponse) },
+  },
+})
+
+api.openapi(statusRoute, async (c) => {
   const db = getDb()
   const captureCount =
     (
@@ -54,20 +91,37 @@ api.get('/status', async (c) => {
     .limit(20)
     .all()
 
-  return c.json({
-    version: '0.3.0',
-    counts: { captures: captureCount, runs: runCount, leases: leases.length },
-    leases,
-    recentRuns: recent,
-  })
+  return c.json(
+    {
+      version: '0.3.0',
+      counts: { captures: captureCount, runs: runCount, leases: leases.length },
+      leases,
+      recentRuns: recent,
+    },
+    200,
+  )
 })
 
-/**
- * GET /api/captures?limit=50
- * Most recent captures, newest first.
- */
-api.get('/captures', async (c) => {
-  const limit = Math.min(Number(c.req.query('limit') ?? 50), 200)
+// ─────────────────────── GET /api/captures?limit= ──────────────────────
+const capturesListQuery = z.object({
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .optional()
+    .transform((v) => (v ? Math.min(Number(v), 200) : 50)),
+})
+
+const capturesListRoute = createRoute({
+  method: 'get',
+  path: '/captures',
+  request: { query: capturesListQuery },
+  responses: {
+    200: { description: 'Most recent captures', content: json(CapturesList) },
+  },
+})
+
+api.openapi(capturesListRoute, async (c) => {
+  const { limit } = c.req.valid('query')
   const db = getDb()
   const rows = await db
     .select({
@@ -83,19 +137,25 @@ api.get('/captures', async (c) => {
     .orderBy(sql`received_at desc`)
     .limit(limit)
     .all()
-  return c.json({ captures: rows })
+  return c.json({ captures: rows }, 200)
 })
 
-/**
- * POST /api/captures
- * Body: { text: string, source?: CaptureSource }
- * Dedups by content hash. Mirrors `hub capture "<text>"`.
- */
-api.post('/captures', async (c) => {
-  const body = await c.req.json().catch(() => null)
-  if (!body || typeof body.text !== 'string' || body.text.trim().length === 0) {
-    return c.json({ error: 'text is required' }, 400)
-  }
+// ───────────────────────── POST /api/captures ──────────────────────────
+const captureCreateRoute = createRoute({
+  method: 'post',
+  path: '/captures',
+  request: { body: { content: json(CaptureCreateRequest) } },
+  responses: {
+    201: {
+      description: 'Capture ingested (new or duplicate)',
+      content: json(CaptureCreateResponse),
+    },
+    400: errorResp('Validation error'),
+  },
+})
+
+api.openapi(captureCreateRoute, async (c) => {
+  const body = c.req.valid('json')
   const { ingest } = await import('@hub/capture/ingest')
   const result = await ingest({
     source: body.source ?? 'manual',
@@ -106,66 +166,19 @@ api.post('/captures', async (c) => {
   return c.json(result, 201)
 })
 
-/**
- * POST /api/ask
- * Body: { input: string, forceLocal?: boolean }
- * One-shot query that goes through the privacy router. Mirrors `hub ask`.
- */
-api.post('/ask', async (c) => {
-  const body = await c.req.json().catch(() => null)
-  if (!body || typeof body.input !== 'string' || body.input.trim().length === 0) {
-    return c.json({ error: 'input is required' }, 400)
-  }
-  const { run } = await import('@hub/agent-runtime')
-  try {
-    const result = await run(
-      { input: body.input, source: 'pwa', forceLocal: !!body.forceLocal },
-      { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'] },
-    )
-    return c.json(result)
-  } catch (err) {
-    log.error({ err: err instanceof Error ? err.message : err }, 'ask failed')
-    return c.json({ error: err instanceof Error ? err.message : 'unknown' }, 500)
-  }
+// ─────────────────────── GET /api/captures/:id ─────────────────────────
+const captureDetailRoute = createRoute({
+  method: 'get',
+  path: '/captures/{id}',
+  request: { params: IdParam },
+  responses: {
+    200: { description: 'Capture detail with body', content: json(CaptureDetail) },
+    404: errorResp('Not found'),
+  },
 })
 
-/**
- * GET /api/runs/:id
- * Full run detail.
- */
-api.get('/runs/:id', async (c) => {
-  const id = c.req.param('id')
-  const db = getDb()
-  const row = await db
-    .select({
-      id: runs.id,
-      agentName: runs.agentName,
-      parentRunId: runs.parentRunId,
-      startedAt: runs.startedAt,
-      endedAt: runs.endedAt,
-      modelUsed: runs.modelUsed,
-      inputTokens: runs.inputTokens,
-      outputTokens: runs.outputTokens,
-      costUsd: runs.costUsd,
-      status: runs.status,
-      permissionTier: runs.permissionTier,
-      errorMessage: runs.errorMessage,
-      outputRef: runs.outputRef,
-    })
-    .from(runs)
-    .where(sql`id = ${id}`)
-    .get()
-  if (!row) return c.json({ error: 'not_found' }, 404)
-  return c.json(row)
-})
-
-/**
- * GET /api/captures/:id
- * Full capture detail including extracted entities/actions/decisions and the
- * filed inbox body (read from disk) when rawContentRef points to a local file.
- */
-api.get('/captures/:id', async (c) => {
-  const id = c.req.param('id')
+api.openapi(captureDetailRoute, async (c) => {
+  const { id } = c.req.valid('param')
   const db = getDb()
   const row = await db
     .select({
@@ -190,7 +203,6 @@ api.get('/captures/:id', async (c) => {
     .get()
   if (!row) return c.json({ error: 'not_found' }, 404)
 
-  // Best-effort: if there's a filed markdown next to raw ref, read it.
   let body: string | null = null
   if (row.rawContentRef && /\.md$/i.test(row.rawContentRef)) {
     try {
@@ -200,22 +212,113 @@ api.get('/captures/:id', async (c) => {
     }
   }
 
-  return c.json({
-    ...row,
+  const detail = {
+    id: row.id,
+    source: row.source,
+    receivedAt: row.receivedAt,
+    classifiedDomain: row.classifiedDomain,
+    classifiedType: row.classifiedType,
+    status: row.status,
+    rawContentRef: row.rawContentRef,
+    contentHash: row.contentHash,
+    confidence: row.confidence,
+    modelUsed: row.modelUsed,
+    errorMessage: row.errorMessage,
     entities: safeParse(row.entitiesJson, []),
     actionItems: safeParse(row.actionItemsJson, []),
     decisions: safeParse(row.decisionsJson, []),
     dispatchedTo: safeParse(row.dispatchedToJson, []),
     body,
-  })
+  }
+  return c.json(detail, 200)
 })
 
-/**
- * GET /api/briefings?limit=30
- * Index of generated briefings. Body lives in Obsidian; returns metadata only.
- */
-api.get('/briefings', async (c) => {
-  const limit = Math.min(Number(c.req.query('limit') ?? 30), 200)
+// ───────────────────────── POST /api/ask ───────────────────────────────
+const askRoute = createRoute({
+  method: 'post',
+  path: '/ask',
+  request: { body: { content: json(AskRequest) } },
+  responses: {
+    200: { description: 'Agent run result', content: json(AskResponse) },
+    400: errorResp('Validation error'),
+    500: errorResp('Agent run failed'),
+  },
+})
+
+api.openapi(askRoute, async (c) => {
+  const body = c.req.valid('json')
+  const { run } = await import('@hub/agent-runtime')
+  try {
+    const result = await run(
+      { input: body.input, source: 'pwa', forceLocal: !!body.forceLocal },
+      { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'] },
+    )
+    return c.json(result, 200)
+  } catch (err) {
+    log.error({ err: err instanceof Error ? err.message : err }, 'ask failed')
+    return c.json({ error: err instanceof Error ? err.message : 'unknown' }, 500)
+  }
+})
+
+// ─────────────────────── GET /api/runs/:id ─────────────────────────────
+const runDetailRoute = createRoute({
+  method: 'get',
+  path: '/runs/{id}',
+  request: { params: IdParam },
+  responses: {
+    200: { description: 'Run detail', content: json(RunDetail) },
+    404: errorResp('Not found'),
+  },
+})
+
+api.openapi(runDetailRoute, async (c) => {
+  const { id } = c.req.valid('param')
+  const db = getDb()
+  const row = await db
+    .select({
+      id: runs.id,
+      agentName: runs.agentName,
+      parentRunId: runs.parentRunId,
+      startedAt: runs.startedAt,
+      endedAt: runs.endedAt,
+      modelUsed: runs.modelUsed,
+      inputTokens: runs.inputTokens,
+      outputTokens: runs.outputTokens,
+      costUsd: runs.costUsd,
+      status: runs.status,
+      permissionTier: runs.permissionTier,
+      errorMessage: runs.errorMessage,
+      outputRef: runs.outputRef,
+    })
+    .from(runs)
+    .where(sql`id = ${id}`)
+    .get()
+  if (!row) return c.json({ error: 'not_found' }, 404)
+  // DB column type is `string` but the contract narrows to the R0–R3 union;
+  // the schema shape is identical, so the cast is safe at runtime.
+  return c.json(row as typeof row & { permissionTier: 'R0' | 'R1' | 'R2' | 'R3' }, 200)
+})
+
+// ─────────────────────── GET /api/briefings ────────────────────────────
+const briefingsListQuery = z.object({
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .optional()
+    .transform((v) => (v ? Math.min(Number(v), 200) : 30)),
+})
+
+const briefingsListRoute = createRoute({
+  method: 'get',
+  path: '/briefings',
+  request: { query: briefingsListQuery },
+  responses: {
+    200: { description: 'Briefing index', content: json(BriefingsList) },
+  },
+})
+
+api.openapi(briefingsListRoute, async (c) => {
+  const { limit } = c.req.valid('query')
   const db = getDb()
   const rows = await db
     .select({
@@ -229,18 +332,22 @@ api.get('/briefings', async (c) => {
     .orderBy(sql`date desc`)
     .limit(limit)
     .all()
-  return c.json({ briefings: rows })
+  return c.json({ briefings: rows }, 200)
 })
 
-/**
- * GET /api/briefings/:date
- * Full briefing metadata + file body (read from Obsidian vault at obsidianRef).
- */
-api.get('/briefings/:date', async (c) => {
-  const date = c.req.param('date')
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return c.json({ error: 'bad_date' }, 400)
-  }
+// ───────────────────── GET /api/briefings/:date ────────────────────────
+const briefingDetailRoute = createRoute({
+  method: 'get',
+  path: '/briefings/{date}',
+  request: { params: DateParam },
+  responses: {
+    200: { description: 'Briefing + body', content: json(BriefingDetail) },
+    404: errorResp('Not found'),
+  },
+})
+
+api.openapi(briefingDetailRoute, async (c) => {
+  const { date } = c.req.valid('param')
   const db = getDb()
   const row = await db
     .select()
@@ -257,43 +364,64 @@ api.get('/briefings/:date', async (c) => {
       log.warn({ ref: row.obsidianRef, err: String(err) }, 'brief body unreadable')
     }
   }
-  return c.json({ ...row, body })
+  return c.json({ ...row, body }, 200)
 })
 
-/**
- * GET /api/settings
- * Read-only, redacted view of server config. Never returns secrets.
- */
-api.get('/settings', (c) => {
+// ───────────────────────── GET /api/settings ───────────────────────────
+const settingsRoute = createRoute({
+  method: 'get',
+  path: '/settings',
+  responses: {
+    200: { description: 'Redacted server config', content: json(Settings) },
+  },
+})
+
+api.openapi(settingsRoute, (c) => {
   const env = loadEnv()
-  return c.json({
+  return c.json(
+    {
+      version: '0.3.0',
+      timezone: env.HUB_TIMEZONE,
+      port: env.HUB_PORT,
+      host: env.HUB_HOST,
+      vaultPath: env.OBSIDIAN_VAULT_PATH ?? null,
+      dbPath: env.HUB_DB_PATH,
+      logLevel: env.HUB_LOG_LEVEL,
+      models: {
+        default: env.HUB_DEFAULT_MODEL,
+        localTrivial: env.HUB_LOCAL_MODEL_TRIVIAL,
+        localPrivate: env.HUB_LOCAL_MODEL_PRIVATE,
+        localFallback: env.HUB_LOCAL_MODEL_FALLBACK,
+      },
+      dailyUsdCap: env.HUB_DAILY_USD_CAP,
+      ollamaUrl: env.OLLAMA_BASE_URL,
+      integrations: {
+        anthropic: !!env.ANTHROPIC_API_KEY,
+        notion: !!env.NOTION_TOKEN,
+        obsidian: !!env.OBSIDIAN_API_KEY,
+        google: !!env.GOOGLE_OAUTH_CLIENT_ID,
+        todoist: !!env.TODOIST_API_TOKEN,
+        github: !!env.GITHUB_PAT,
+        webhookSecret: !!env.HUB_WEBHOOK_SECRET,
+        uiToken: !!env.HUB_UI_TOKEN,
+        ntfy: !!env.NTFY_TOPIC,
+      },
+    },
+    200,
+  )
+})
+
+// ─────────────────── GET /api/openapi.json (spec) ──────────────────────
+// Served on the authenticated /api/* namespace so the spec is not public.
+// PR #2 (generated client) consumes this at build time.
+api.doc('/openapi.json', {
+  openapi: '3.0.0',
+  info: {
+    title: 'Hub API',
     version: '0.3.0',
-    timezone: env.HUB_TIMEZONE,
-    port: env.HUB_PORT,
-    host: env.HUB_HOST,
-    vaultPath: env.OBSIDIAN_VAULT_PATH ?? null,
-    dbPath: env.HUB_DB_PATH,
-    logLevel: env.HUB_LOG_LEVEL,
-    models: {
-      default: env.HUB_DEFAULT_MODEL,
-      localTrivial: env.HUB_LOCAL_MODEL_TRIVIAL,
-      localPrivate: env.HUB_LOCAL_MODEL_PRIVATE,
-      localFallback: env.HUB_LOCAL_MODEL_FALLBACK,
-    },
-    dailyUsdCap: env.HUB_DAILY_USD_CAP,
-    ollamaUrl: env.OLLAMA_BASE_URL,
-    integrations: {
-      anthropic: !!env.ANTHROPIC_API_KEY,
-      notion: !!env.NOTION_TOKEN,
-      obsidian: !!env.OBSIDIAN_API_KEY,
-      google: !!env.GOOGLE_OAUTH_CLIENT_ID,
-      todoist: !!env.TODOIST_API_TOKEN,
-      github: !!env.GITHUB_PAT,
-      webhookSecret: !!env.HUB_WEBHOOK_SECRET,
-      uiToken: !!env.HUB_UI_TOKEN,
-      ntfy: !!env.NTFY_TOPIC,
-    },
-  })
+    description:
+      'Private HTTP surface backing the web UI and CLI. All shapes come from @hub/shared/contracts.',
+  },
 })
 
 function safeParse<T>(json: string | null | undefined, fallback: T): T {

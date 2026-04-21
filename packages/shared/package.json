@@ -11,6 +11,7 @@
     "./log": "./dist/log.js",
     "./types": "./dist/types.js",
     "./ids": "./dist/ids.js",
+    "./contracts": "./dist/contracts/index.js",
     "./testing/vitest-sqlite-shim": "./testing/vitest-sqlite-shim.ts",
     "./testing/test-env": "./testing/test-env.ts"
   },
@@ -20,6 +21,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.0",
     "dotenv": "^17.4.2",
     "pino": "^9.5.0",
     "ulid": "^2.4.0",
