@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["corepack enable && pnpm install --frozen-lockfile"]
+cmds = ["npx --yes pnpm@10 install --frozen-lockfile"]
 
 [phases.build]
-cmds = ["pnpm -r build"]
+cmds = ["npx --yes pnpm@10 -r build"]
 
 [start]
 cmd = "node --no-warnings=ExperimentalWarning apps/server/dist/main.js"
