@@ -12,6 +12,7 @@ import { webhooks } from './webhooks.js'
 import { api } from './api.js'
 import { requireAuth, loginHandler, logoutHandler } from './auth.js'
 import { startScheduler } from './cron.js'
+import { startSweeper } from './rate-limit.js'
 
 const log = getLogger('server')
 
@@ -126,6 +127,8 @@ export async function main(): Promise<void> {
   log.info({ port: env.HUB_PORT, host: env.HUB_HOST }, 'hub server listening')
   // Brief scheduler — a no-op unless HUB_BRIEF_ENABLED=1.
   startScheduler()
+  // Hourly sweep of the rate-limit bucket map so IP rotation can't leak memory.
+  startSweeper()
 }
 
 const isEntryPoint =

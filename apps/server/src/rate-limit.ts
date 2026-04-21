@@ -98,3 +98,49 @@ export function clear(key: string): void {
 export function _reset(): void {
   buckets.clear()
 }
+
+/**
+ * Evict any bucket whose attempts are all older than LONG_MS. Prevents
+ * unbounded Map growth from an attacker rotating IPs: without this, every
+ * distinct client key leaks ~100 bytes forever.
+ *
+ * Cheap to call — O(n) over the bucket count with the per-entry prune we
+ * already run on access. Returns the number of evicted keys for observability.
+ */
+export function sweep(now = Date.now()): number {
+  let evicted = 0
+  for (const [key, entry] of buckets) {
+    prune(entry, now)
+    if (entry.attempts.length === 0) {
+      buckets.delete(key)
+      evicted++
+    }
+  }
+  return evicted
+}
+
+/**
+ * Install a periodic sweeper on a hidden `setInterval`. Called from the
+ * server bootstrap; noop if already installed. The interval is unref'd so
+ * it never blocks process exit.
+ */
+let sweeperTimer: ReturnType<typeof setInterval> | undefined
+export function startSweeper(intervalMs = LONG_MS): void {
+  if (sweeperTimer) return
+  sweeperTimer = setInterval(() => {
+    sweep()
+  }, intervalMs)
+  sweeperTimer.unref?.()
+}
+
+export function stopSweeper(): void {
+  if (sweeperTimer) {
+    clearInterval(sweeperTimer)
+    sweeperTimer = undefined
+  }
+}
+
+/** Test-only: report current bucket count. */
+export function _size(): number {
+  return buckets.size
+}

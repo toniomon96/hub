@@ -9,6 +9,8 @@ Conventional Commits drive release notes; this file captures the human-facing su
 
 ### Added
 
+- `apps/server/src/rate-limit.ts` grows a periodic `sweep()` + `startSweeper()` (unref'd hourly `setInterval`) that evicts client buckets whose attempts are all older than the long window. Prevents unbounded Map growth if an attacker rotates IPs. Called from the server bootstrap.
+- `@hub/shared/testing/test-env` exports `seedTestEnv()` + `restoreTestEnv()` — seeds the minimum env (`ANTHROPIC_API_KEY`, `HUB_SKIP_DOTENV=1`, `HUB_LOG_LEVEL=fatal`) every suite needs so `loadEnv()` doesn't throw in CI where no `.env` exists. Replaces scattered per-suite `process.env[...] = ...` blocks.
 - `HUB_MCP_STRICT` env flag (default `0`). When `1`, `buildMcpScopes()` filters out any MCP server whose stdio command+args (or HTTP URL) is not on the hardcoded allowlist in `packages/agent-runtime/src/mcp-config.ts`. In the default permissive mode, unknown servers are still spawned but logged at `warn`. Planned to flip default to `1` in v0.6.
 - Process bootstrap: issue + PR templates, Dependabot, split CI jobs, CodeQL + gitleaks + pnpm audit workflows, release workflow on tag, husky pre-commit/pre-push with lint-staged, `pnpm verify` one-shot gate.
 - `apps/server/src/__tests__/capture-ollama-mock.test.ts`: regression test pinning the apps/server → capture → classify → `@hub/models/ollama` import graph so mocks intercept across workspace boundaries.
