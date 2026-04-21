@@ -127,7 +127,39 @@ export function loadEnv(source?: NodeJS.ProcessEnv | Record<string, string | und
       .join('\n')
     throw new Error(`Invalid environment configuration:\n${issues}`)
   }
-  cached = parsed.data
+  const env = parsed.data
+  const nodeEnv = (source ?? process.env)['NODE_ENV']
+  const isProd = nodeEnv === 'production'
+
+  // HUB_COOKIE_SECRET must be distinct from HUB_UI_TOKEN in prod.
+  // Same-string reuse means a leak of the UI bearer token also compromises
+  // the HMAC key used to mint cookies — two trust domains collapse into one.
+  if (env.HUB_UI_TOKEN !== '') {
+    if (env.HUB_COOKIE_SECRET === '') {
+      if (isProd) {
+        throw new Error(
+          'HUB_COOKIE_SECRET must be set (and distinct from HUB_UI_TOKEN) when NODE_ENV=production',
+        )
+      }
+      // Dev fallback: derive a cookie secret that is NOT equal to the token
+      // (so auth.ts can drop the `|| HUB_UI_TOKEN` fallback unconditionally).
+      // This is still a dev crutch, not a secret — set HUB_COOKIE_SECRET
+      // explicitly before deploying anywhere reachable.
+      env.HUB_COOKIE_SECRET = `${env.HUB_UI_TOKEN}:cookie:dev`
+      process.stderr.write(
+        '[hub/env] HUB_COOKIE_SECRET not set; using dev-only fallback derived from HUB_UI_TOKEN. Set HUB_COOKIE_SECRET explicitly in prod.\n',
+      )
+    } else if (env.HUB_COOKIE_SECRET === env.HUB_UI_TOKEN) {
+      if (isProd) {
+        throw new Error('HUB_COOKIE_SECRET must differ from HUB_UI_TOKEN when NODE_ENV=production')
+      }
+      process.stderr.write(
+        '[hub/env] HUB_COOKIE_SECRET equals HUB_UI_TOKEN; set a distinct value before deploying.\n',
+      )
+    }
+  }
+
+  cached = env
   return cached
 }
 

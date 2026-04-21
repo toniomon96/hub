@@ -22,9 +22,13 @@ const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 90 // 90 days
 
 function cookieSecret(): Buffer {
   const env = loadEnv()
-  const raw = env.HUB_COOKIE_SECRET || env.HUB_UI_TOKEN
-  if (!raw) throw new Error('HUB_UI_TOKEN (or HUB_COOKIE_SECRET) must be set to issue cookies')
-  return Buffer.from(raw, 'utf8')
+  // HUB_COOKIE_SECRET is guaranteed distinct from HUB_UI_TOKEN after
+  // loadEnv() (see packages/shared/src/env.ts). Prod rejects a blank or
+  // equal value; dev auto-derives `${HUB_UI_TOKEN}:cookie:dev`.
+  if (!env.HUB_COOKIE_SECRET) {
+    throw new Error('HUB_COOKIE_SECRET must be set to issue cookies')
+  }
+  return Buffer.from(env.HUB_COOKIE_SECRET, 'utf8')
 }
 
 function b64url(buf: Buffer): string {
