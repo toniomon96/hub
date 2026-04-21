@@ -260,6 +260,78 @@ api.openapi(askRoute, async (c) => {
   }
 })
 
+// ─────────────────── POST /api/ask/stream (SSE) ─────────────────────────
+/**
+ * Server-Sent Events streaming variant of /api/ask. Not declared via
+ * `createRoute` because `@hono/zod-openapi` doesn't model `text/event-stream`
+ * responses cleanly — the SSE event schema (`AskStreamMeta|Token|Final|Error`)
+ * is documented in `@hub/shared/contracts/ask.ts` and pinned by tests.
+ *
+ * The client disconnecting (abort signal) ends the upstream runStream()
+ * generator within one iteration, which finalizes the run as `partial`.
+ */
+api.post('/ask/stream', async (c) => {
+  let body: { input: string; forceLocal?: boolean }
+  try {
+    body = (await c.req.json()) as { input: string; forceLocal?: boolean }
+  } catch {
+    return c.json({ error: 'invalid json' }, 400)
+  }
+  if (!body?.input || typeof body.input !== 'string') {
+    return c.json({ error: 'input required' }, 400)
+  }
+
+  const { runStream } = await import('@hub/agent-runtime')
+  const ctrl = new AbortController()
+  c.req.raw.signal?.addEventListener('abort', () => ctrl.abort(), { once: true })
+
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const write = (event: string, data: unknown) => {
+        const frame = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+        controller.enqueue(encoder.encode(frame))
+      }
+      try {
+        for await (const ev of runStream(
+          { input: body.input, source: 'pwa', forceLocal: !!body.forceLocal },
+          { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'], signal: ctrl.signal },
+        )) {
+          if (ev.type === 'meta') write('meta', { runId: ev.runId, modelUsed: ev.modelUsed })
+          else if (ev.type === 'token') write('token', { text: ev.text })
+          else if (ev.type === 'final') {
+            const { type: _t, ...payload } = ev
+            write('final', payload)
+          } else {
+            const { type: _t, ...payload } = ev
+            write('error', payload)
+          }
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        log.error({ err: message }, 'ask/stream failed')
+        const frame = `event: error\ndata: ${JSON.stringify({ message })}\n\n`
+        controller.enqueue(encoder.encode(frame))
+      } finally {
+        controller.close()
+      }
+    },
+    cancel() {
+      ctrl.abort()
+    },
+  })
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no', // disable nginx buffering if proxied
+    },
+  })
+})
+
 // ─────────────────────── GET /api/runs/:id ─────────────────────────────
 const runDetailRoute = createRoute({
   method: 'get',

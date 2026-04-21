@@ -38,8 +38,39 @@ program
   .command('ask <query...>')
   .description('One-shot query, auto-routed')
   .option('--local', 'force local SLM (privacy)', false)
+  .option('--stream', 'stream tokens as they arrive (stdout)', false)
   .action(async (queryParts: string[], opts) => {
     const input = queryParts.join(' ')
+    if (opts.stream) {
+      const { runStream } = await import('@hub/agent-runtime')
+      const ctrl = new AbortController()
+      const onSig = () => ctrl.abort()
+      process.on('SIGINT', onSig)
+      let modelUsed = ''
+      let runId = ''
+      try {
+        for await (const ev of runStream(
+          { input, source: 'cli', forceLocal: !!opts.local },
+          { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'], signal: ctrl.signal },
+        )) {
+          if (ev.type === 'meta') {
+            modelUsed = ev.modelUsed
+            runId = ev.runId
+            console.error(kleur.cyan(`run ${runId} → ${modelUsed}`))
+          } else if (ev.type === 'token') {
+            process.stdout.write(ev.text)
+          } else if (ev.type === 'final') {
+            process.stdout.write('\n')
+          } else {
+            console.error(kleur.red(`\nerror: ${ev.message}`))
+            process.exitCode = 1
+          }
+        }
+      } finally {
+        process.off('SIGINT', onSig)
+      }
+      return
+    }
     const result = await run(
       { input, source: 'cli', forceLocal: !!opts.local },
       { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'] },
