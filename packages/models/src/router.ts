@@ -52,7 +52,8 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
   const triage: Triage = { sensitivity, complexity, domain, localOnly }
 
   // Rule 1: localOnly or sensitivity=high → private local SLM.
-  if (localOnly) {
+  // Skip if no local model configured (e.g. cloud-only deployment).
+  if (localOnly && env.HUB_LOCAL_MODEL_PRIVATE) {
     return {
       triage,
       spec: {
@@ -64,7 +65,8 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
   }
 
   // Rule 2: trivial inputs go to the cheap local SLM.
-  if (complexity === 'trivial') {
+  // Skip if no local model configured (e.g. cloud-only deployment).
+  if (complexity === 'trivial' && env.HUB_LOCAL_MODEL_TRIVIAL) {
     return {
       triage,
       spec: {
