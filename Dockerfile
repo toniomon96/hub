@@ -2,6 +2,8 @@ FROM node:22-slim
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y git --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable
 
 # Copy manifests first so dependency install is cached
