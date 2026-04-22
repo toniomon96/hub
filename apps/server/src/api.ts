@@ -641,7 +641,7 @@ const PromptListRow = z.object({
 
 const promptListRoute = createRoute({
   method: 'get',
-  path: '/prompts',
+  path: '/prompts/list',
   responses: {
     200: { description: 'Prompt library', content: json(z.array(PromptListRow)) },
     500: errorResp('Query failed'),

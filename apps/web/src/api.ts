@@ -232,7 +232,7 @@ export const api = {
   obsSensitivity: (since?: string) =>
     request<ObsSensRow[]>(`/api/observability/sensitivity?since=${since ?? '30d'}`),
   exports: () => request<ExportFileMeta[]>('/api/exports'),
-  promptsList: () => request<PromptRow[]>('/api/prompts'),
+  promptsList: () => request<PromptRow[]>('/api/prompts/list'),
   registryTargets: (repo?: string) =>
     request<PromptTarget[]>(
       `/api/registry/targets${repo ? `?repo=${encodeURIComponent(repo)}` : ''}`,
