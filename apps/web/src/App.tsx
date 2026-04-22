@@ -7,6 +7,7 @@ import { Runs } from './pages/Runs.js'
 import { Brief } from './pages/Brief.js'
 import { Context } from './pages/Context.js'
 import { Observability } from './pages/Observability.js'
+import { Projects } from './pages/Projects.js'
 import { Settings } from './pages/Settings.js'
 import { Login } from './pages/Login.js'
 import { api } from './api.js'
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/captures', label: 'Captures' },
   { to: '/runs', label: 'Runs' },
   { to: '/observability', label: 'Observe' },
+  { to: '/projects', label: 'Projects' },
   { to: '/settings', label: 'Settings' },
 ]
 
@@ -67,6 +69,7 @@ export function App() {
             ))}
           </nav>
           <button
+            type="button"
             onClick={() => api.logout()}
             className="ml-auto text-xs text-neutral-500 hover:text-neutral-300"
           >
@@ -84,6 +87,7 @@ export function App() {
           <Route path="/captures" element={<Captures />} />
           <Route path="/runs" element={<Runs />} />
           <Route path="/observability" element={<Observability />} />
+          <Route path="/projects" element={<Projects />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>

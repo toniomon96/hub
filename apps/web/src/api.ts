@@ -39,6 +39,43 @@ export interface ExportFileMeta {
   createdAt: string
 }
 
+export interface PromptRow {
+  id: string
+  title: string
+  description: string
+  sensitivity: 'low' | 'medium' | 'high'
+  complexity: 'trivial' | 'standard' | 'complex'
+  enabled: number
+}
+
+export interface PromptTarget {
+  id: number
+  repo: string
+  promptId: string
+  trigger: string
+  enabled: number
+  lastRunAt: number | null
+}
+
+export interface SyncResult {
+  promptsUpserted: number
+  targetsUpserted: number
+  targetsRemoved: number
+  errors: Array<{ file: string; error: string }>
+}
+
+export interface EditResult {
+  diff: string
+  committed: boolean
+  commitSha?: string
+  pushedTo?: string
+  syncSummary?: SyncResult
+}
+
+export interface PromptRunResult {
+  runId: string
+}
+
 export interface StatusResponse {
   version: string
   counts: { captures: number; runs: number; leases: number }
@@ -195,6 +232,35 @@ export const api = {
   obsSensitivity: (since?: string) =>
     request<ObsSensRow[]>(`/api/observability/sensitivity?since=${since ?? '30d'}`),
   exports: () => request<ExportFileMeta[]>('/api/exports'),
+  promptsList: () => request<PromptRow[]>('/api/prompts'),
+  registryTargets: (repo?: string) =>
+    request<PromptTarget[]>(
+      `/api/registry/targets${repo ? `?repo=${encodeURIComponent(repo)}` : ''}`,
+    ),
+  promptSync: () => request<SyncResult>('/api/prompts/sync', { method: 'POST', body: '{}' }),
+  promptRun: (promptId: string, repo: string, args?: Record<string, unknown>) =>
+    request<PromptRunResult>('/api/prompts/run', {
+      method: 'POST',
+      body: JSON.stringify({ promptId, repo, args }),
+    }),
+  registryAdd: (
+    repo: string,
+    opts?: { sensitivity?: 'low' | 'medium' | 'high'; branch?: string },
+  ) =>
+    request<EditResult>('/api/registry/add', {
+      method: 'POST',
+      body: JSON.stringify({ repo, ...opts }),
+    }),
+  registryWire: (repo: string, promptId: string, trigger: string) =>
+    request<EditResult>('/api/registry/wire', {
+      method: 'POST',
+      body: JSON.stringify({ repo, promptId, trigger }),
+    }),
+  registryRemove: (repo: string, promptId?: string, trigger?: string) =>
+    request<EditResult>('/api/registry/remove', {
+      method: 'POST',
+      body: JSON.stringify({ repo, promptId, trigger }),
+    }),
   login: (token: string) =>
     fetch('/auth/login', {
       method: 'POST',

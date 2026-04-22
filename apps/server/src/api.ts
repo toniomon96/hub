@@ -628,6 +628,49 @@ api.openapi(promptRunRoute, async (c) => {
   }
 })
 
+// ─────────────────── GET /api/prompts ───────────────────────────────────
+
+const PromptListRow = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  sensitivity: z.string(),
+  complexity: z.string(),
+  enabled: z.number(),
+})
+
+const promptListRoute = createRoute({
+  method: 'get',
+  path: '/prompts',
+  responses: {
+    200: { description: 'Prompt library', content: json(z.array(PromptListRow)) },
+    500: errorResp('Query failed'),
+  },
+})
+
+api.openapi(promptListRoute, async (c) => {
+  try {
+    const { prompts } = await import('@hub/db/schema')
+    const db = getDb()
+    const rows = await db
+      .select({
+        id: prompts.id,
+        title: prompts.title,
+        description: prompts.description,
+        sensitivity: prompts.sensitivity,
+        complexity: prompts.complexity,
+        enabled: prompts.enabled,
+      })
+      .from(prompts)
+      .all()
+    return c.json(rows, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'prompts list failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
 // ──────────────────── Registry management routes ────────────────────────
 
 const EditResultSchema = z.object({
