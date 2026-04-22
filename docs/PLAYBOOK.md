@@ -1,7 +1,6 @@
+# Engineering Playbook
 
-# Playbook references
-
-This project follows the canonical engineering playbook:
+Cross-project operating principles for this repo live in [`toniomon96/engineering-playbook`](https://raw.githubusercontent.com/toniomon96/engineering-playbook/main/HANDBOOK.md). That repo is the canonical home — do not copy content here. Key files:
 
 - **Handbook:** https://raw.githubusercontent.com/toniomon96/engineering-playbook/main/HANDBOOK.md
 - **Design workflow:** https://raw.githubusercontent.com/toniomon96/engineering-playbook/main/DESIGN_WORKFLOW.md
