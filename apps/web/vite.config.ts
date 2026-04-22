@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
       strictPort: false,
       proxy: {
         '/api': { target, changeOrigin: false },
+        '/auth': { target, changeOrigin: false },
         '/health': { target, changeOrigin: false },
         '/webhooks': { target, changeOrigin: false },
       },
