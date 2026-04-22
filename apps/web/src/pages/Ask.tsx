@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, type AskResponse } from '../api.js'
 import { ErrorBox } from './Dashboard.js'
+import { FeedbackBar } from '../components/FeedbackBar.js'
 
 export function Ask() {
   const [input, setInput] = useState('')
@@ -81,6 +82,7 @@ export function Ask() {
           <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4 whitespace-pre-wrap text-sm leading-relaxed">
             {result.output}
           </div>
+          <FeedbackBar sourceType="ask" sourceId={result.runId} />
         </div>
       )}
     </div>

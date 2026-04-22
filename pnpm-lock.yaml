@@ -247,6 +247,9 @@ importers:
       '@hub/models':
         specifier: workspace:*
         version: link:../models
+      '@hub/prompts':
+        specifier: workspace:*
+        version: link:../prompts
       '@hub/shared':
         specifier: workspace:*
         version: link:../shared

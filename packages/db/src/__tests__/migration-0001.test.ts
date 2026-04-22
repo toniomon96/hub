@@ -137,6 +137,18 @@ describe('migration 0001_prompt_orchestration', () => {
       )
     `)
 
+    // briefings is part of migration 0000 — must exist so 0002 (ALTER TABLE briefings) succeeds
+    raw0.exec(`
+      CREATE TABLE briefings (
+        date TEXT PRIMARY KEY NOT NULL,
+        generated_at INTEGER NOT NULL,
+        run_id TEXT NOT NULL,
+        obsidian_ref TEXT NOT NULL,
+        rating INTEGER,
+        notes TEXT
+      )
+    `)
+
     raw0
       .prepare(
         `INSERT INTO runs (id, agent_name, started_at, model_used, status)

@@ -7,6 +7,38 @@ import { fileToInbox } from './inbox.js'
 
 const log = getLogger('ingest')
 
+// Hard cap: no single capture should dominate the context window.
+const CAPTURE_TEXT_MAX_CHARS = 8_000
+
+/**
+ * Strip common prompt injection patterns from externally-sourced capture text.
+ * Applied before any model call so injected instructions never reach the LLM.
+ */
+export function sanitizeForPrompt(text: string): string {
+  return text
+    .replace(/ignore\s+(previous|all|above)\s+instructions?/gi, '[redacted]')
+    .replace(/^(system|assistant|user):\s*/gim, '[redacted-role]: ')
+    .replace(/<\|im_(start|end)\|>/gi, '')
+    .slice(0, CAPTURE_TEXT_MAX_CHARS)
+}
+
+/**
+ * Returns true if the current local time falls within the configured quiet-hours window.
+ * Format: "startHH-endHH" in 24h local time (HUB_TIMEZONE). Wraps midnight when start > end.
+ * Empty string → no quiet hours → always returns false.
+ */
+export function isQuietHour(quietHours: string): boolean {
+  if (!quietHours) return false
+  const parts = quietHours.split('-')
+  if (parts.length !== 2) return false
+  const [startH, endH] = parts.map(Number)
+  if (isNaN(startH!) || isNaN(endH!)) return false
+  const hour = new Date().getHours()
+  return startH! > endH!
+    ? hour >= startH! || hour < endH! // wraps midnight (e.g. 22-06)
+    : hour >= startH! && hour < endH! // same-day window (e.g. 10-18)
+}
+
 export interface IngestArgs {
   source: CaptureSource
   text: string
@@ -83,9 +115,12 @@ export async function ingest(args: IngestArgs): Promise<IngestResult> {
     return { id, isDuplicate: false, classified: false }
   }
 
+  // Sanitize before any model call — strips injection patterns from external sources.
+  const safeText = sanitizeForPrompt(args.text)
+
   try {
     const env = loadEnv()
-    const result = await classify({ text: args.text })
+    const result = await classify({ text: safeText })
     await db
       .update(captures)
       .set({
@@ -105,13 +140,26 @@ export async function ingest(args: IngestArgs): Promise<IngestResult> {
       'capture classified',
     )
 
+    // Dispatch process-capture if there are action items, we're not in quiet hours,
+    // and the hub-prompts repo is configured.
+    if (
+      result.actionItems.length > 0 &&
+      !isQuietHour(env.HUB_QUIET_HOURS) &&
+      env.HUB_PROMPTS_REPO_URL
+    ) {
+      // Fire-and-forget — capture storage is never blocked on dispatch.
+      dispatchProcessCapture(id).catch((err) => {
+        log.warn({ id, err: String(err) }, 'process-capture dispatch failed')
+      })
+    }
+
     if (args.fileToInbox === false) {
       return { id, isDuplicate: false, classified: true, filed: false }
     }
 
     const inboxResult = await fileToInbox({
       captureId: id,
-      text: args.text,
+      text: safeText,
       source: args.source,
       domain: result.domain,
       type: result.type,
@@ -126,4 +174,26 @@ export async function ingest(args: IngestArgs): Promise<IngestResult> {
     )
     return { id, isDuplicate: false, classified: false }
   }
+}
+
+async function dispatchProcessCapture(captureId: string): Promise<void> {
+  const { dispatchPromptRun } = await import('@hub/prompts/dispatcher')
+  const env = loadEnv()
+  // Extract the repo slug from HUB_PROMPTS_REPO_URL (e.g. "https://github.com/user/hub-prompts")
+  const repoMatch = env.HUB_PROMPTS_REPO_URL!.match(/github\.com\/(.+?)(?:\.git)?$/)
+  const repo = repoMatch ? repoMatch[1]! : ''
+  if (!repo) {
+    log.warn(
+      { captureId },
+      'could not extract repo slug from HUB_PROMPTS_REPO_URL; skipping dispatch',
+    )
+    return
+  }
+  await dispatchPromptRun({
+    promptId: 'process-capture',
+    repo,
+    args: { captureId },
+    trigger: 'event',
+  })
+  log.info({ captureId, repo }, 'process-capture dispatched')
 }

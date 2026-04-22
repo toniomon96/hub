@@ -80,10 +80,11 @@ export async function runBrief(opts: BriefOptions = {}): Promise<BriefResult> {
     maxTurns: 6,
   })
 
-  const path = await writeToVault(env.OBSIDIAN_VAULT_PATH, date, r.output || emptyBriefBody(date))
+  const body = r.output || emptyBriefBody(date)
+  const path = await writeToVault(env.OBSIDIAN_VAULT_PATH, date, body)
 
-  if (r.status === 'success' && path) {
-    await recordBriefing(date, r.runId, path)
+  if (r.status === 'success') {
+    await recordBriefing(date, r.runId, path ?? '', body)
   }
 
   return {
@@ -275,9 +276,13 @@ async function getCachedBriefing(date: string) {
   return db.select().from(briefings).where(eq(briefings.date, date)).get()
 }
 
-async function recordBriefing(date: string, runId: string, path: string): Promise<void> {
+async function recordBriefing(
+  date: string,
+  runId: string,
+  path: string,
+  body: string,
+): Promise<void> {
   const db = getDb()
-  // Upsert (the primary key is date).
   await db
     .insert(briefings)
     .values({
@@ -285,10 +290,11 @@ async function recordBriefing(date: string, runId: string, path: string): Promis
       generatedAt: Date.now(),
       runId,
       obsidianRef: path,
+      body,
     })
     .onConflictDoUpdate({
       target: briefings.date,
-      set: { generatedAt: Date.now(), runId, obsidianRef: path },
+      set: { generatedAt: Date.now(), runId, obsidianRef: path, body },
     })
     .run()
 }

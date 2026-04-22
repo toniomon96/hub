@@ -149,6 +149,17 @@ export async function main(): Promise<void> {
   startScheduler()
   // Hourly sweep of the rate-limit bucket map so IP rotation can't leak memory.
   startSweeper()
+  // Weekly export — Sunday 23:00 in HUB_TIMEZONE.
+  import('node-cron')
+    .then(({ default: cron }) => {
+      const tz = env.HUB_TIMEZONE
+      cron.schedule(
+        '0 23 * * 0',
+        () => import('./jobs/export.js').then(({ runWeeklyExportSafe }) => runWeeklyExportSafe()),
+        { timezone: tz },
+      )
+    })
+    .catch((err: unknown) => log.warn({ err: String(err) }, 'export cron init failed'))
 }
 
 const isEntryPoint =

@@ -1,3 +1,44 @@
+export interface ObsRun {
+  id: string
+  agentName: string
+  startedAt: number
+  endedAt: number | null
+  modelUsed: string
+  inputTokens: number
+  outputTokens: number
+  costUsd: number
+  status: string
+  promptId: string | null
+  adversarialNote: string | null
+}
+
+export interface ObsCostRow {
+  promptId: string | null
+  modelUsed: string
+  totalUsd: number
+  runCount: number
+}
+
+export interface ObsPromptRow {
+  promptId: string
+  runCount: number
+  actedCount: number
+  ignoredCount: number
+  wrongCount: number
+  lastRunAt: number | null
+}
+
+export interface ObsSensRow {
+  provider: string
+  count: number
+}
+
+export interface ExportFileMeta {
+  name: string
+  sizeBytes: number
+  createdAt: string
+}
+
 export interface StatusResponse {
   version: string
   counts: { captures: number; runs: number; leases: number }
@@ -117,11 +158,43 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ text, source }),
     }),
+  briefLatest: () => request<BriefingDetail>('/api/brief/latest'),
+  briefRegenerate: () =>
+    request<BriefingDetail>('/api/brief/regenerate', { method: 'POST', body: '{}' }),
+  feedbackCreate: (
+    sourceType: 'ask' | 'brief' | 'prompt_run',
+    sourceId: string,
+    signal: 'acted' | 'ignored' | 'wrong',
+  ) =>
+    request<{ id: string }>('/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ sourceType, sourceId, signal }),
+    }),
+  contextGet: () => request<{ body: string; updatedAt: string | null }>('/api/context'),
+  contextPut: (body: string) =>
+    request<{ ok: true }>('/api/context', {
+      method: 'PUT',
+      body: JSON.stringify({ body }),
+    }),
+  contextAppend: (section: string, entry: string) =>
+    request<{ ok: true }>('/api/context/append', {
+      method: 'POST',
+      body: JSON.stringify({ section, entry }),
+    }),
   ask: (input: string, forceLocal = false) =>
     request<AskResponse>('/api/ask', {
       method: 'POST',
       body: JSON.stringify({ input, forceLocal }),
     }),
+  obsRuns: (since?: string, limit?: number) =>
+    request<ObsRun[]>(`/api/observability/runs?since=${since ?? '7d'}&limit=${limit ?? 50}`),
+  obsCosts: (since?: string) =>
+    request<ObsCostRow[]>(`/api/observability/costs?since=${since ?? '30d'}`),
+  obsPrompts: (since?: string) =>
+    request<ObsPromptRow[]>(`/api/observability/prompts?since=${since ?? '30d'}`),
+  obsSensitivity: (since?: string) =>
+    request<ObsSensRow[]>(`/api/observability/sensitivity?since=${since ?? '30d'}`),
+  exports: () => request<ExportFileMeta[]>('/api/exports'),
   login: (token: string) =>
     fetch('/auth/login', {
       method: 'POST',

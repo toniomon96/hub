@@ -501,7 +501,14 @@ registryCmd
     }
   })
 
-program.parseAsync().catch((err) => {
-  console.error(kleur.red('error:'), err.message)
-  process.exit(1)
-})
+// Auto-migrate on every CLI invocation — idempotent, fast when already up-to-date.
+// Mirrors the server's startup behaviour so the CLI DB stays in sync without
+// requiring a manual `hub migrate` after every deploy.
+;(async () => {
+  const { migrate } = await import('@hub/db/migrate')
+  migrate()
+  await program.parseAsync().catch((err) => {
+    console.error(kleur.red('error:'), err.message)
+    process.exit(1)
+  })
+})()

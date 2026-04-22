@@ -64,6 +64,8 @@ export const runs = sqliteTable(
     promptVersion: integer('prompt_version'),
     targetRepo: text('target_repo'),
     runTrigger: text('run_trigger'), // 'scheduled'|'event'|'manual'|'mcp'|'http'
+    // Phase 10: adversarial gate — strongest-case-against note, null if no consequential action taken
+    adversarialNote: text('adversarial_note'),
   },
   (t) => ({
     agentNameIdx: index('runs_agent_name_idx').on(t.agentName),
@@ -105,6 +107,7 @@ export const briefings = sqliteTable('briefings', {
   obsidianRef: text('obsidian_ref').notNull(),
   rating: integer('rating'), // 1-5, set via `hub brief --rate`
   notes: text('notes'),
+  body: text('body'), // stored in DB so Railway can serve it without Obsidian
 })
 
 /**
@@ -163,6 +166,25 @@ export const mcpConsents = sqliteTable('mcp_consents', {
   expiresAt: integer('expires_at'),
   notes: text('notes'),
 })
+
+/**
+ * feedback — per-run signal from the user: acted / ignored / wrong.
+ * Written by the FeedbackBar UI component; read by feedback-review prompt.
+ */
+export const feedback = sqliteTable(
+  'feedback',
+  {
+    id: text('id').primaryKey(),
+    sourceType: text('source_type', { enum: ['ask', 'brief', 'prompt_run'] }).notNull(),
+    sourceId: text('source_id').notNull(),
+    signal: text('signal', { enum: ['acted', 'ignored', 'wrong'] }).notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => ({
+    sourceIdx: index('feedback_source_idx').on(t.sourceType, t.sourceId),
+    signalIdx: index('feedback_signal_idx').on(t.signal),
+  }),
+)
 
 /**
  * prompts — synced from hub-prompts repo. Keyed on id (slug).
@@ -224,6 +246,7 @@ export const allTables = {
   projects,
   agentLocks,
   mcpConsents,
+  feedback,
   prompts,
   promptTargets,
 } as const

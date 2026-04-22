@@ -111,17 +111,20 @@ describe('runBrief', () => {
     expect(runMod.run).toHaveBeenCalledTimes(2)
   })
 
-  it('with no OBSIDIAN_VAULT_PATH, returns path=null and does NOT record a briefing row', async () => {
+  it('with no OBSIDIAN_VAULT_PATH, returns path=null but still records briefing body in DB', async () => {
     const { runBrief } = await freshEnv({ OBSIDIAN_VAULT_PATH: '' })
     const result = await runBrief({ date: '2026-04-23', localOnly: true })
 
     expect(result.path).toBeNull()
 
+    // Phase 3: body is always stored in DB so the web UI can serve it, even without Obsidian.
     const { getDb } = await import('@hub/db')
     const { briefings } = await import('@hub/db/schema')
     const { eq } = await import('drizzle-orm')
     const row = await getDb().select().from(briefings).where(eq(briefings.date, '2026-04-23')).get()
-    expect(row).toBeUndefined()
+    expect(row).toBeDefined()
+    expect(row!.obsidianRef).toBe('')
+    expect(row!.body).toBeTruthy()
   })
 
   it('forwards localOnly=true to the runtime with empty scopes', async () => {

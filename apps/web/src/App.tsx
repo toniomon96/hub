@@ -5,6 +5,8 @@ import { Ask } from './pages/Ask.js'
 import { Captures } from './pages/Captures.js'
 import { Runs } from './pages/Runs.js'
 import { Brief } from './pages/Brief.js'
+import { Context } from './pages/Context.js'
+import { Observability } from './pages/Observability.js'
 import { Settings } from './pages/Settings.js'
 import { Login } from './pages/Login.js'
 import { api } from './api.js'
@@ -12,10 +14,12 @@ import { api } from './api.js'
 const navItems = [
   { to: '/', label: 'Dashboard' },
   { to: '/brief', label: 'Brief' },
+  { to: '/context', label: 'Context' },
   { to: '/ask', label: 'Ask' },
   { to: '/capture', label: 'Capture' },
   { to: '/captures', label: 'Captures' },
   { to: '/runs', label: 'Runs' },
+  { to: '/observability', label: 'Observe' },
   { to: '/settings', label: 'Settings' },
 ]
 
@@ -74,10 +78,12 @@ export function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/brief" element={<Brief />} />
+          <Route path="/context" element={<Context />} />
           <Route path="/ask" element={<Ask />} />
           <Route path="/capture" element={<Capture />} />
           <Route path="/captures" element={<Captures />} />
           <Route path="/runs" element={<Runs />} />
+          <Route path="/observability" element={<Observability />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>

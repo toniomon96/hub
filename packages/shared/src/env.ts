@@ -106,6 +106,11 @@ const EnvSchema = z.object({
   // itself (fine — cookies are only valid when the token still matches).
   HUB_COOKIE_SECRET: z.string().default(''),
 
+  // Quiet hours — dispatch and ntfy notifications are suppressed during this window.
+  // Format: "startHH-endHH" in local time (HUB_TIMEZONE). Wraps midnight when start > end.
+  // Example: "22-06" = quiet from 10pm to 6am. Default empty = no quiet hours.
+  HUB_QUIET_HOURS: z.string().default(''),
+
   // Brief scheduler: when set to '1', the server starts the node-cron jobs for
   // the nightly 22:00 brief, 05:00 morning brief, Fri retro, Sun planning.
   // Defaults to '0' so dev/test never silently spend Anthropic credits.

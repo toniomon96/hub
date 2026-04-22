@@ -86,6 +86,50 @@ Prompts are stored in a separate git repo (`HUB_PROMPTS_REPO_URL`) as Markdown f
 
 ---
 
+## Domain Authority
+
+Trust is earned per domain, not granted globally. Every external tool action has a level:
+
+| Level | What Hub does |
+| --- | --- |
+| **suggest** | Proposes the action as text, shows it — does not execute. |
+| **draft** | Executes the tool, surfaces output for review before any external effect. |
+| **act** | Executes with a 60-second ConfirmAction window. |
+
+Authority levels are stored in `## Domain Authority` in `/data/context.md`. Format: `- domain-name: suggest|draft|act`. Any unlisted domain defaults to `suggest`.
+
+**Enforcement**: `loadDomainAuthorityPolicy()` in `packages/agent-runtime/src/context.ts` reads the section and formats it as a system-prompt directive. This is injected by `assembleSystemPrompt()` in `run.ts` before every agent run, so the model always knows the current authority boundaries.
+
+**Escalation**: Run `hub prompt run authority-review` (manual trigger) after 30+ days of clean track record for a domain. The prompt presents evidence and proposals — Toni confirms manually via the Context editor. Hub never self-escalates.
+
+**Commandment floors** (never escalate above `suggest`):
+
+- Financial actions (invoices, expenses, transfers)
+- External emails (commandment: 60s window minimum)
+- GitHub PR creation (blast radius — hold at `suggest` indefinitely unless explicitly overridden)
+
+---
+
+## If Hub Dies
+
+Everything Hub does is exportable. Recovery does not require Hub.
+
+Weekly exports land in `/data/exports/` (Sunday 23:00) via `apps/server/src/jobs/export.ts`. Download from `/api/exports` in the web UI or via `curl`.
+
+| Export file | Contains | Without Hub |
+| --- | --- | --- |
+| `captures-YYYY-MM-DD.jsonl` | All captures from the past week, one JSON object per line | Read with `jq` or any text editor |
+| `context-YYYY-MM-DD.md` | Snapshot of context.md (projects, commitments, decisions, etc.) | Plain markdown — readable immediately |
+| `briefs-YYYY-MM-DD.md` | All briefings from the past week | Plain markdown |
+
+**Gmail**: open gmail.com — no Hub dependency.
+**Calendar**: open calendar.google.com — no Hub dependency.
+**Tasks**: open todoist.com — no Hub dependency.
+
+The unaided self can still walk. This is not morbid maintenance — it is the proof of the augmentation test (ETHOS §II). If Hub is needed to function, Hub has failed.
+
+---
+
 ## What's NOT in MVP
 
 PWA, Hub-as-MCP-server, embeddings + retrieval, full router rule table, capture dispatch, subagent spawning. All in V1+.
