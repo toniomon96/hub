@@ -31,7 +31,8 @@ These are hard refusals. Edit deliberately, not impulsively. Not at 2am.
 - No language implying consciousness, emotion, or friendship.
 - No collapsing trade-offs. Surface them; let me decide.`
 
-const DEFAULT_CONTEXT = `---
+function makeDefaultContext(): string {
+  return `---
 updated: ${new Date().toISOString().slice(0, 10)}
 version: 1
 ---
@@ -80,6 +81,7 @@ version: 1
 
 ## Stale
 <!-- Entries moved here for confirmation before deletion -->`
+}
 
 function contextPath(): string {
   return resolve(process.env['HUB_CONTEXT_PATH'] ?? './data/context.md')
@@ -184,7 +186,7 @@ export async function appendToContext(section: string, entry: string): Promise<v
 
   if (!existsSync(path)) {
     mkdirSync(dirname(path), { recursive: true })
-    writeFileSync(path, DEFAULT_CONTEXT, 'utf8')
+    writeFileSync(path, makeDefaultContext(), 'utf8')
     log.info({ path }, 'context.md bootstrapped')
   }
 
@@ -194,7 +196,12 @@ export async function appendToContext(section: string, entry: string): Promise<v
       const raw = readFileSync(path, 'utf8')
       const dated = `- [${new Date().toISOString().slice(0, 10)}] ${entry.trim()}`
       const heading = `## ${section}`
-      const headingIdx = raw.indexOf(`\n${heading}`)
+      // Handle heading at position 0 (no leading newline) as well as mid-file.
+      const headingAtStart = raw.startsWith(`${heading}\n`) || raw.startsWith(`${heading}`)
+      const headingIdx = headingAtStart ? 0 : raw.indexOf(`\n${heading}`)
+      // headingStart is the index of the `#` character; afterHeading skips past the heading line.
+      const headingStart = headingIdx === 0 ? 0 : headingIdx + 1
+      const afterHeading = headingStart + heading.length
 
       let newContent: string
       if (headingIdx === -1) {
@@ -202,7 +209,6 @@ export async function appendToContext(section: string, entry: string): Promise<v
         newContent = raw.trimEnd() + `\n\n${heading}\n${dated}\n`
       } else {
         // Find where this section ends (next ## heading or EOF)
-        const afterHeading = headingIdx + 1 + heading.length
         const nextHeadingIdx = raw.indexOf('\n## ', afterHeading)
         const insertAt = nextHeadingIdx === -1 ? raw.length : nextHeadingIdx
         newContent = raw.slice(0, insertAt).trimEnd() + '\n' + dated + '\n' + raw.slice(insertAt)

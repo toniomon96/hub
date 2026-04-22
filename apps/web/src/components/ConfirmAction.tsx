@@ -34,7 +34,7 @@ export function ConfirmAction({
     }
     const id = setTimeout(() => setRemaining((r) => r - 1), 1000)
     return () => clearTimeout(id)
-  }, [remaining, onConfirm])
+  }, [remaining, onCancel])
 
   const pct = ((countdownSeconds - remaining) / countdownSeconds) * 100
 
