@@ -18,6 +18,7 @@
     {
       "source": "/health",
       "destination": "https://hubserver-production-0cd1.up.railway.app/health"
-    }
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
