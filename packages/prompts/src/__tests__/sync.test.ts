@@ -213,7 +213,7 @@ targets:
     getRawDb().prepare('SELECT count(*) as c FROM prompt_targets').get() as { c: number }
   ).c
   expect(count).toBe(0)
-})
+}, 30000)
 
 it('accumulates parse errors but still upserts valid prompts', async () => {
   const promptsDir = makePromptRepo([

@@ -14,12 +14,21 @@ const ollamaChunks: Array<{
   text?: string
   usage?: { prompt_tokens: number; completion_tokens: number }
 }> = []
+let lastCreateArgs:
+  | {
+      model: string
+      messages: Array<{ role: 'system' | 'user'; content: string }>
+      temperature: number
+      stream: true
+    }
+  | undefined
 
 vi.mock('@hub/models/ollama', () => ({
   getOllamaClient: () => ({
     chat: {
       completions: {
-        create: vi.fn(async () => {
+        create: vi.fn(async (args) => {
+          lastCreateArgs = args as typeof lastCreateArgs
           async function* gen() {
             for (const c of ollamaChunks) {
               const chunk: Record<string, unknown> = {
@@ -66,6 +75,7 @@ async function setup() {
 describe('runStream (Ollama path)', () => {
   beforeEach(() => {
     ollamaChunks.length = 0
+    lastCreateArgs = undefined
     vi.clearAllMocks()
   })
 
@@ -129,5 +139,47 @@ describe('runStream (Ollama path)', () => {
     const row = await getDb().select().from(runs).where(eq(runs.id, meta.runId)).get()
     expect(row?.status).toBe('partial')
     expect(row?.errorMessage).toBe('aborted')
+  })
+
+  it('composes the same constitutional system prompt for streaming runs', async () => {
+    ollamaChunks.push({ text: 'ok' })
+    const { runStream } = await setup()
+    for await (const ev of runStream(
+      { input: 'hi', source: 'cli', forceLocal: false },
+      { agentName: 't', systemPrompt: 'Task-specific instruction.' },
+    )) {
+      void ev
+    }
+
+    const system = lastCreateArgs?.messages[0]
+    expect(system?.role).toBe('system')
+    expect(system?.content).toContain('You are Hub — a precision cognitive tool')
+    expect(system?.content).toContain('Task-specific instruction.')
+  }, 30000)
+
+  it('records a blocked R3 streaming run during quiet hours', async () => {
+    process.env['HUB_QUIET_HOURS'] = '00-23'
+    _resetEnvCache()
+    const { runStream } = await setup()
+    const events: RunStreamEvent[] = []
+    for await (const ev of runStream(
+      { input: 'ship it', source: 'cli', forceLocal: false },
+      { agentName: 't', permissionTier: 'R3' },
+    )) {
+      events.push(ev)
+    }
+
+    expect(events.map((e) => e.type)).toEqual(['meta', 'error'])
+    const meta = events[0]
+    expect(meta?.type).toBe('meta')
+    if (meta?.type !== 'meta') throw new Error('expected meta')
+
+    const { getDb } = await import('@hub/db')
+    const { runs } = await import('@hub/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const row = await getDb().select().from(runs).where(eq(runs.id, meta.runId)).get()
+    expect(row?.status).toBe('error')
+    expect(row?.errorMessage).toBe('quiet_hours_blocked')
+    expect(row?.modelUsed).toBe('blocked:quiet-hours')
   })
 })

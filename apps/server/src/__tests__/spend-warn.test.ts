@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type * as SharedModule from '@hub/shared'
 import { seedTestEnv, restoreTestEnv } from '@hub/shared/testing/test-env'
 import { _resetEnvCache } from '@hub/shared'
 
@@ -18,7 +19,7 @@ vi.mock('@hub/db', () => ({
 }))
 
 vi.mock('@hub/shared', async () => {
-  const actual = await vi.importActual<typeof import('@hub/shared')>('@hub/shared')
+  const actual = await vi.importActual<typeof SharedModule>('@hub/shared')
   return {
     ...actual,
     publishNtfy: (...args: unknown[]) => publishNtfyMock(...args),

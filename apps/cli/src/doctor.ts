@@ -2,6 +2,7 @@ import { existsSync, accessSync, constants, mkdirSync, writeFileSync, unlinkSync
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { execSync } from 'node:child_process'
+import type * as NodeSqlite from 'node:sqlite'
 import kleur from 'kleur'
 import { loadEnv, type Env } from '@hub/shared'
 
@@ -9,9 +10,8 @@ import { loadEnv, type Env } from '@hub/shared'
 // output even with `external: [/^node:/]`. Pull it via createRequire so the
 // string is opaque to the bundler.
 const requireFromHere = createRequire(import.meta.url)
-type NodeSqlite = typeof import('node:sqlite')
 const builtinName = 'node:' + 'sqlite'
-const { DatabaseSync } = requireFromHere(builtinName) as NodeSqlite
+const { DatabaseSync } = requireFromHere(builtinName) as typeof NodeSqlite
 
 export type CheckStatus = 'ok' | 'fail' | 'skip'
 

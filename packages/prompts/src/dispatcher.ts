@@ -1,4 +1,4 @@
-import { getDb, getRawDb, withLease } from '@hub/db'
+import { getDb, withLease } from '@hub/db'
 import { prompts as promptsTable, promptTargets } from '@hub/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { run } from '@hub/agent-runtime/run'
@@ -168,16 +168,29 @@ export async function dispatchPromptRun(opts: DispatchOpts): Promise<{ runId: st
       runTrigger: opts.trigger,
     })
 
-    // Handle outputs
-    const outputConfig = JSON.parse(prompt.outputConfig) as Record<string, unknown>
-    const date = new Date().toISOString().slice(0, 10)
-    await handleOutputs(outputConfig, result.output, {
-      repo: resolvedRepo,
-      promptId: resolvedPromptId,
-      runId: result.runId,
-      args: mergedArgs,
-      date,
-    })
+    // Only successful runs should trigger external side effects. Otherwise we risk
+    // creating empty GitHub issues/comments or stale notifications from failed runs.
+    if (result.status === 'success') {
+      const outputConfig = JSON.parse(prompt.outputConfig) as Record<string, unknown>
+      const date = new Date().toISOString().slice(0, 10)
+      await handleOutputs(outputConfig, result.output, {
+        repo: resolvedRepo,
+        promptId: resolvedPromptId,
+        runId: result.runId,
+        args: mergedArgs,
+        date,
+      })
+    } else {
+      log.warn(
+        {
+          promptId: resolvedPromptId,
+          repo: resolvedRepo,
+          runId: result.runId,
+          status: result.status,
+        },
+        'prompt run did not succeed; skipping outputs',
+      )
+    }
 
     // Update last_run on persistent target
     if (persistentTarget !== undefined) {

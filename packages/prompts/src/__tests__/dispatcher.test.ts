@@ -88,6 +88,35 @@ it('dispatches a prompt run and returns a runId', async () => {
   expect(result.runId).toBe('run-abc')
 })
 
+it('skips output handlers when the prompt run fails', async () => {
+  freshDbEnv()
+  const { closeDb } = await import('@hub/db')
+  closeDb()
+  const { migrate } = await import('@hub/db/migrate')
+  migrate()
+
+  const targetId = await seedPromptAndTarget()
+  const handleOutputs = vi.fn().mockResolvedValue(undefined)
+
+  vi.doMock('@hub/agent-runtime/run', () => ({
+    run: vi.fn().mockResolvedValue({
+      runId: 'run-failed',
+      output: '',
+      modelUsed: 'test',
+      status: 'error',
+    }),
+  }))
+  vi.doMock('../outputs.js', () => ({
+    handleOutputs,
+  }))
+
+  const { dispatchPromptRun } = await import('../dispatcher.js')
+  const result = await dispatchPromptRun({ targetId, trigger: 'manual' })
+
+  expect(result.runId).toBe('run-failed')
+  expect(handleOutputs).not.toHaveBeenCalled()
+})
+
 it('records a skipped run when when_expr is falsy', async () => {
   freshDbEnv()
   const { closeDb } = await import('@hub/db')

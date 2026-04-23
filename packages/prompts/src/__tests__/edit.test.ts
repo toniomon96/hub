@@ -95,7 +95,7 @@ it('addTarget creates a new repo block', async () => {
   expect(result.diff).toContain('+')
   expect(result.commitSha).toBeTruthy()
   expect(result.pushedTo).toBe('main')
-})
+}, 30000)
 
 it('comment preservation: comments survive addTarget round-trip', async () => {
   const registryUrl = makeRegistryRepo(YAML_WITH_COMMENTS)

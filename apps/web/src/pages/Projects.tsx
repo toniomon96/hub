@@ -88,12 +88,10 @@ function RunButton({
 // ─── Wire prompt form ─────────────────────────────────────────────────────
 
 function WireForm({
-  repo,
   availablePrompts,
   onWire,
   onClose,
 }: {
-  repo: string
   availablePrompts: PromptRow[]
   onWire: (promptId: string, trigger: string) => Promise<void>
   onClose: () => void
@@ -256,7 +254,6 @@ function ProjectCard({
       {showWire && (
         <div className="px-4 pb-3">
           <WireForm
-            repo={repo}
             availablePrompts={availablePrompts}
             onWire={(promptId, trigger) => onWire(repo, promptId, trigger)}
             onClose={() => setShowWire(false)}

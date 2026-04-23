@@ -1,5 +1,5 @@
 import type { Task } from '@hub/shared'
-import { getLogger } from '@hub/shared'
+import { getLogger, loadEnv, isQuietHour } from '@hub/shared'
 import { route } from '@hub/models/router'
 import { getOllamaClient } from '@hub/models/ollama'
 import { query } from '@anthropic-ai/claude-agent-sdk'
@@ -7,6 +7,7 @@ import type { Options } from '@anthropic-ai/claude-agent-sdk'
 import { startRun, finishRun } from './persist.js'
 import { getTodaySpendUsd } from '@hub/db'
 import { buildMcpScopes, type McpScopeName, type McpServerCfg } from './mcp-config.js'
+import { assembleSystemPrompt } from './system-prompt.js'
 
 const log = getLogger('agent-runtime-stream')
 
@@ -55,6 +56,27 @@ export async function* runStream(
   task: Task,
   opts: RunStreamOptions,
 ): AsyncGenerator<RunStreamEvent, void, void> {
+  const env = loadEnv()
+  const tier = opts.permissionTier ?? 'R0'
+  if ((tier === 'R2' || tier === 'R3') && isQuietHour(env.HUB_QUIET_HOURS)) {
+    const endHour = env.HUB_QUIET_HOURS.split('-')[1] ?? '??'
+    const runId = await startRun({
+      agentName: opts.agentName,
+      modelUsed: 'blocked:quiet-hours',
+      permissionTier: tier,
+    })
+    const message = `Run blocked: quiet hours active (${env.HUB_QUIET_HOURS}). ${tier} actions require human presence. Retry after ${endHour}:00.`
+    await finishRun(runId, {
+      status: 'error',
+      errorMessage: 'quiet_hours_blocked',
+      outputRef: message,
+    })
+    log.warn({ tier, quietHours: env.HUB_QUIET_HOURS }, 'runStream blocked: quiet hours active')
+    yield { type: 'meta', runId, modelUsed: 'blocked:quiet-hours' }
+    yield { type: 'error', runId, message }
+    return
+  }
+
   const todaySpendUsd = await getTodaySpendUsd()
   const decision = route(task, { todaySpendUsd })
   const scopeNames = opts.scopes ?? []
@@ -69,11 +91,12 @@ export async function* runStream(
   const runId = await startRun({
     agentName: opts.agentName,
     modelUsed: `${decision.spec.provider}:${decision.spec.model}`,
-    permissionTier: opts.permissionTier ?? 'R0',
+    permissionTier: tier,
     mcpServers: Object.keys(mcpServers),
   })
 
   const modelUsed = `${decision.spec.provider}:${decision.spec.model}`
+  const fullSystemPrompt = assembleSystemPrompt(opts.systemPrompt)
   yield { type: 'meta', runId, modelUsed }
 
   let accumulated = ''
@@ -91,7 +114,7 @@ export async function* runStream(
     if (decision.spec.provider === 'ollama') {
       const client = getOllamaClient()
       const messages = [
-        ...(opts.systemPrompt ? [{ role: 'system' as const, content: opts.systemPrompt }] : []),
+        ...(fullSystemPrompt ? [{ role: 'system' as const, content: fullSystemPrompt }] : []),
         { role: 'user' as const, content: task.input },
       ]
       const stream = await client.chat.completions.create({
@@ -117,7 +140,7 @@ export async function* runStream(
     } else {
       const sdkOptions: Options = {
         model: decision.spec.model,
-        ...(opts.systemPrompt ? { systemPrompt: opts.systemPrompt } : {}),
+        ...(fullSystemPrompt ? { systemPrompt: fullSystemPrompt } : {}),
         ...(opts.maxTurns !== undefined ? { maxTurns: opts.maxTurns } : {}),
         ...(opts.allowedTools ? { allowedTools: opts.allowedTools } : {}),
         ...(Object.keys(mcpServers).length > 0
