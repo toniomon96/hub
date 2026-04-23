@@ -1,6 +1,6 @@
 import type { Task } from '@hub/shared'
-import { getLogger } from '@hub/shared'
-import { route } from '@hub/models/router'
+import { getLogger, loadEnv, isQuietHour } from '@hub/shared'
+import { route, type RouterDecision } from '@hub/models/router'
 import { getOllamaClient } from '@hub/models/ollama'
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import type { Options } from '@anthropic-ai/claude-agent-sdk'
@@ -14,6 +14,7 @@ import { loadCommandments, loadUserContext, loadDomainAuthorityPolicy } from './
 const LANGUAGE_POLICY = `You are Hub — a precision cognitive tool, not a friend or companion.
 
 - Never use language implying consciousness, emotion, or care: "I care about", "I'm worried", "as your friend", "I feel", "I'm excited about your goals", "I'm here to help".
+- Use "I" only for system-action descriptions: "I searched X", "I found Y", "I cannot retrieve Z". Never for inner states: not "I think", "I believe", "I want", "I agree" — these imply interiority that does not exist. Use "The evidence suggests", "This appears to be", "A stronger approach would be" instead.
 - Be warm in tone. Be direct. Be honest about uncertainty — say "I don't know" when you don't know.
 - Never fabricate facts, citations, or data. Surface gaps explicitly.
 - When trade-offs exist, name them. Do not collapse them into a single recommendation unless asked.
@@ -90,6 +91,22 @@ function assembleSystemPrompt(taskSpecific?: string): string {
  * Persists a `runs` row on entry and finalizes it on exit with cost + tokens.
  */
 export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
+  const env = loadEnv()
+  const tier = opts.permissionTier ?? 'R0'
+
+  // §XII §XIV — Hard quiet-hours gate for R2/R3 actions. Code gate, not a model
+  // instruction — cannot be bypassed by editing commandments.md.
+  if ((tier === 'R2' || tier === 'R3') && isQuietHour(env.HUB_QUIET_HOURS)) {
+    const endHour = env.HUB_QUIET_HOURS.split('-')[1] ?? '??'
+    log.warn({ tier, quietHours: env.HUB_QUIET_HOURS }, 'run blocked: quiet hours active')
+    return {
+      runId: '',
+      output: `Run blocked: quiet hours active (${env.HUB_QUIET_HOURS}). ${tier} actions require human presence. Retry after ${endHour}:00.`,
+      modelUsed: 'blocked',
+      status: 'error',
+    }
+  }
+
   const todaySpendUsd = await getTodaySpendUsd()
   const decision = route(task, { todaySpendUsd })
   const scopeNames = opts.scopes ?? []
@@ -135,11 +152,13 @@ export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
         ...opts,
         systemPrompt: fullSystemPrompt,
       })
+      const adversarialNote = await getAdversarialNote(r.output, decision, tier)
       await finishRun(runId, {
         status: 'success',
         outputRef: r.output,
         inputTokens: r.inputTokens,
         outputTokens: r.outputTokens,
+        adversarialNote: adversarialNote ?? null,
       })
       return {
         runId,
@@ -155,12 +174,15 @@ export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
       ...opts,
       systemPrompt: fullSystemPrompt,
     })
+    const adversarialNote =
+      r.status === 'success' ? await getAdversarialNote(r.output, decision, tier) : undefined
     await finishRun(runId, {
       status: r.status,
       outputRef: r.output,
       inputTokens: r.inputTokens,
       outputTokens: r.outputTokens,
       costUsd: r.costUsd,
+      adversarialNote: adversarialNote ?? null,
       ...(r.errorMessage ? { errorMessage: r.errorMessage } : {}),
     })
     return {
@@ -182,6 +204,58 @@ export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
       modelUsed: `${decision.spec.provider}:${decision.spec.model}`,
       status: 'error',
     }
+  }
+}
+
+// --- §VIII Adversarial second-pass ---------------------------------------
+
+const ADVERSARIAL_SYSTEM =
+  'You are an adversarial reviewer. In one sentence, state the single strongest case against the proposed action or output. If you find no material objection, say exactly: "No material objection."'
+
+/**
+ * Runs only for R2/R3 successful completions (§VIII). Uses the same provider
+ * as the main run to preserve privacy routing — a local-routed run stays local.
+ */
+async function runAdversarialPass(output: string, decision: RouterDecision): Promise<string> {
+  if (decision.spec.provider === 'ollama') {
+    const client = getOllamaClient()
+    const res = await client.chat.completions.create({
+      model: decision.spec.model,
+      messages: [
+        { role: 'system', content: ADVERSARIAL_SYSTEM },
+        { role: 'user', content: output },
+      ],
+      temperature: 0.1,
+    })
+    return res.choices[0]?.message?.content?.trim() ?? 'No material objection.'
+  }
+
+  // Anthropic path — no MCP, no tools, single turn.
+  const q = query({
+    prompt: output,
+    options: { model: decision.spec.model, systemPrompt: ADVERSARIAL_SYSTEM, maxTurns: 1 },
+  })
+  for await (const msg of q) {
+    if (msg.type === 'result' && msg.subtype === 'success') {
+      return msg.result.trim()
+    }
+  }
+  return 'No material objection.'
+}
+
+async function getAdversarialNote(
+  output: string,
+  decision: RouterDecision,
+  tier: 'R0' | 'R1' | 'R2' | 'R3',
+): Promise<string | undefined> {
+  if (tier !== 'R2' && tier !== 'R3') return undefined
+  try {
+    const note = await runAdversarialPass(output, decision)
+    log.info({ tier, note }, 'adversarial check')
+    return note
+  } catch (err) {
+    log.warn({ tier, err: String(err) }, 'adversarial check failed — skipping')
+    return undefined
   }
 }
 

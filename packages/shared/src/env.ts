@@ -118,10 +118,13 @@ const EnvSchema = z.object({
 
   // MCP server allowlist enforcement. When '1', buildMcpScopes() filters out
   // any server whose command+args (or HTTP URL) is not on the hardcoded
-  // allowlist in packages/agent-runtime/src/mcp-config.ts. When '0' (current
-  // default), the allowlist is advisory — unknown servers are permitted but
-  // logged. Plan: flip default to '1' in v0.6.
-  HUB_MCP_STRICT: z.enum(['0', '1']).default('0'),
+  // allowlist in packages/agent-runtime/src/mcp-config.ts. Default ON (§X).
+  HUB_MCP_STRICT: z.enum(['0', '1']).default('1'),
+
+  // Desktop Commander (shell access) opt-in. OFF by default — granting a model
+  // unrestricted shell is a significant authority that must be explicitly enabled.
+  // Set HUB_MCP_SHELL=1 only in sessions where shell assistance is intended.
+  HUB_MCP_SHELL: z.enum(['0', '1']).default('0'),
 })
 
 export type Env = z.infer<typeof EnvSchema>
@@ -194,6 +197,15 @@ export function loadEnv(source?: NodeJS.ProcessEnv | Record<string, string | und
         '[hub/env] HUB_COOKIE_SECRET equals HUB_UI_TOKEN; set a distinct value before deploying.\n',
       )
     }
+  }
+
+  // Warn loudly in production when no custom sensitivity patterns are configured.
+  // The base patterns in router.ts provide a floor, but custom patterns for names,
+  // project names, and domain-specific terms should always be set in prod (§X).
+  if (!env.HUB_SENSITIVITY_PATTERNS && isProd) {
+    process.stderr.write(
+      '[hub/env] WARNING: HUB_SENSITIVITY_PATTERNS is empty. Base patterns active but no custom patterns configured — personal names, project terms, and domain-specific identifiers will not be flagged. Set HUB_SENSITIVITY_PATTERNS in production.\n',
+    )
   }
 
   cached = env

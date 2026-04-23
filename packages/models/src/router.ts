@@ -115,18 +115,38 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
   }
 }
 
+// Hardcoded sensitivity floor — always active regardless of HUB_SENSITIVITY_PATTERNS (§X).
+// Intentionally conservative: false positives send to local model (safe);
+// false negatives send personal data to Anthropic (not safe).
+const BASE_SENSITIVITY_REGEXPS = [
+  'salary',
+  'ssn',
+  'social.?security',
+  'password',
+  'credit.?card',
+  'confidential',
+  'hipaa',
+  '\\bphi\\b',
+  'bank.?account',
+].map((p) => new RegExp(p, 'i'))
+
 /**
  * Sensitivity detection. Pure function, no I/O.
  *
- * Pattern source: env HUB_SENSITIVITY_PATTERNS (comma-separated regex).
+ * Two-stage check:
+ *   1. BASE_SENSITIVITY_REGEXPS — hardcoded, always active (§X floor).
+ *   2. HUB_SENSITIVITY_PATTERNS — operator-configured, comma-separated regex.
+ *
  * Caller can override per-task in `opts.triage.sensitivity` BUT the router
  * still pins `localOnly=true` if input matches — preventing accidental loosening.
- *
- * Default behavior on uncertainty: caller did not supply patterns → 'low'.
- * This is the right default for an empty inbox / fresh install. Once the user
- * configures patterns, the gate is meaningful.
  */
 export function detectSensitivity(input: string, patterns: string): 'low' | 'medium' | 'high' {
+  // Stage 1: base patterns — no configuration required.
+  for (const re of BASE_SENSITIVITY_REGEXPS) {
+    if (re.test(input)) return 'high'
+  }
+
+  // Stage 2: operator-configured patterns.
   if (!patterns.trim()) return 'low'
   const groups = patterns
     .split(',')

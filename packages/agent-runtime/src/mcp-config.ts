@@ -101,15 +101,18 @@ export function buildMcpScopes(): McpScopes {
     })
   }
 
-  // Desktop Commander — local only, no env required. Default-deny destructive
-  // tools at the consent layer (see ARCHITECTURE.md §8 — tool-level allowlist).
-  scopes.system.push({
-    type: 'stdio',
-    command: 'npx',
-    args: ['-y', '@wonderwhy-er/desktop-commander'],
-  })
+  // Desktop Commander — opt-in only. Granting the model unrestricted shell
+  // access is a significant authority that must be explicitly enabled (§X).
+  // Set HUB_MCP_SHELL=1 to enable for sessions that require shell assistance.
+  if (env.HUB_MCP_SHELL === '1') {
+    scopes.system.push({
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', '@wonderwhy-er/desktop-commander'],
+    })
+  }
 
-  return enforceAllowlist(scopes, env.HUB_MCP_STRICT === '1')
+  return enforceAllowlist(scopes, env.HUB_MCP_STRICT !== '0')
 }
 
 /**

@@ -27,6 +27,8 @@ export interface RunFinishArgs {
   errorMessage?: string
   outputRef?: string
   reversalPayload?: string
+  /** §VIII adversarial gate — strongest-case-against result. Null for non-R2/R3 runs. */
+  adversarialNote?: string | null
 }
 
 export async function startRun(args: RunStartArgs): Promise<string> {
@@ -67,6 +69,7 @@ export async function finishRun(runId: string, args: RunFinishArgs): Promise<voi
       errorMessage: args.errorMessage ?? null,
       outputRef: args.outputRef ?? null,
       reversalPayload: args.reversalPayload ?? null,
+      adversarialNote: args.adversarialNote ?? null,
     })
     .where(eq(runs.id, runId))
     .run()

@@ -26,8 +26,15 @@ describe('detectSensitivity', () => {
   it('returns low when no pattern matches', () => {
     expect(detectSensitivity('what is the weather', TEST_ENV.HUB_SENSITIVITY_PATTERNS)).toBe('low')
   })
-  it('returns low when no patterns configured (fresh install)', () => {
-    expect(detectSensitivity('SSN 123-45-6789', '')).toBe('low')
+  it('base patterns catch SSN even with no custom patterns configured', () => {
+    // BASE_SENSITIVITY_PATTERNS is always active — "ssn" is a base pattern.
+    expect(detectSensitivity('SSN 123-45-6789', '')).toBe('high')
+  })
+  it('returns low for benign input with no custom patterns configured', () => {
+    expect(detectSensitivity('what is the weather today', '')).toBe('low')
+  })
+  it('base patterns catch salary even without custom patterns', () => {
+    expect(detectSensitivity('my salary is 120k', '')).toBe('high')
   })
   it('skips invalid regex patterns silently', () => {
     // [invalid( is malformed; wife is valid; input contains "wife" so should hit

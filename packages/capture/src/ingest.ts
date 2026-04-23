@@ -1,6 +1,13 @@
 import { getDb } from '@hub/db'
 import { captures } from '@hub/db/schema'
-import { newId, contentHash, getLogger, loadEnv, type CaptureSource } from '@hub/shared'
+import {
+  newId,
+  contentHash,
+  getLogger,
+  loadEnv,
+  isQuietHour,
+  type CaptureSource,
+} from '@hub/shared'
 import { eq } from 'drizzle-orm'
 import { classify } from './classify.js'
 import { fileToInbox } from './inbox.js'
@@ -20,23 +27,6 @@ export function sanitizeForPrompt(text: string): string {
     .replace(/^(system|assistant|user):\s*/gim, '[redacted-role]: ')
     .replace(/<\|im_(start|end)\|>/gi, '')
     .slice(0, CAPTURE_TEXT_MAX_CHARS)
-}
-
-/**
- * Returns true if the current local time falls within the configured quiet-hours window.
- * Format: "startHH-endHH" in 24h local time (HUB_TIMEZONE). Wraps midnight when start > end.
- * Empty string → no quiet hours → always returns false.
- */
-export function isQuietHour(quietHours: string): boolean {
-  if (!quietHours) return false
-  const parts = quietHours.split('-')
-  if (parts.length !== 2) return false
-  const [startH, endH] = parts.map(Number)
-  if (isNaN(startH!) || isNaN(endH!)) return false
-  const hour = new Date().getHours()
-  return startH! > endH!
-    ? hour >= startH! || hour < endH! // wraps midnight (e.g. 22-06)
-    : hour >= startH! && hour < endH! // same-day window (e.g. 10-18)
 }
 
 export interface IngestArgs {
