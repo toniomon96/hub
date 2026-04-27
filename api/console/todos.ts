@@ -1,0 +1,88 @@
+import { requireHubAuth } from '../_lib/auth'
+import {
+  archiveTodo,
+  ConsoleStoreError,
+  createTodo,
+  listTodos,
+  parseTodoCreateInput,
+  parseTodoPatchInput,
+  updateTodo,
+} from '../_lib/console-store'
+import { badRequest, json, methodNotAllowed, readRequestObject } from '../_lib/http'
+import { isSupabaseConfigured } from '../_lib/supabase'
+
+export async function GET(request: Request): Promise<Response> {
+  const authError = requireHubAuth(request)
+  if (authError) return authError
+  if (!isSupabaseConfigured()) return supabaseNotConfigured()
+
+  const limit = Number(new URL(request.url).searchParams.get('limit') ?? '50')
+  return json({ rows: await listTodos(Number.isFinite(limit) ? Math.min(limit, 100) : 50) })
+}
+
+export async function POST(request: Request): Promise<Response> {
+  const authError = requireHubAuth(request)
+  if (authError) return authError
+  if (!isSupabaseConfigured()) return supabaseNotConfigured()
+
+  const parsed = parseTodoCreateInput(await readRequestObject(request))
+  if (!parsed.ok) return badRequest(parsed.error)
+
+  try {
+    return json({ row: await createTodo(parsed.value) }, { status: 201 })
+  } catch (error) {
+    return storeError(error)
+  }
+}
+
+export async function PATCH(request: Request): Promise<Response> {
+  const authError = requireHubAuth(request)
+  if (authError) return authError
+  if (!isSupabaseConfigured()) return supabaseNotConfigured()
+
+  const parsed = parseTodoPatchInput(await readRequestObject(request))
+  if (!parsed.ok) return badRequest(parsed.error)
+
+  try {
+    return json({ row: await updateTodo(parsed.value) })
+  } catch (error) {
+    return storeError(error)
+  }
+}
+
+export async function DELETE(request: Request): Promise<Response> {
+  const authError = requireHubAuth(request)
+  if (authError) return authError
+  if (!isSupabaseConfigured()) return supabaseNotConfigured()
+
+  const body = await readRequestObject(request)
+  const id = new URL(request.url).searchParams.get('id') ?? (body['id'] as string | undefined)
+  if (!id) return badRequest('Todo id is required.')
+
+  try {
+    return json({ row: await archiveTodo(id) })
+  } catch (error) {
+    return storeError(error)
+  }
+}
+
+export function OPTIONS(): Response {
+  return methodNotAllowed('OPTIONS', ['GET', 'POST', 'PATCH', 'DELETE'])
+}
+
+function supabaseNotConfigured(): Response {
+  return json({ error: 'supabase_not_configured' }, { status: 503 })
+}
+
+function storeError(error: unknown): Response {
+  if (error instanceof ConsoleStoreError) {
+    return json({ error: 'console_store_error', message: error.message }, { status: error.status })
+  }
+  return json(
+    {
+      error: 'console_store_error',
+      message: error instanceof Error ? error.message : String(error),
+    },
+    { status: 500 },
+  )
+}

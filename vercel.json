@@ -2,23 +2,32 @@
   "buildCommand": "pnpm --filter @hub/web build",
   "outputDirectory": "apps/web/dist",
   "installCommand": "pnpm install",
+  "crons": [
+    { "path": "/api/cron/morning-brief", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/nightly-brief", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/week-retro", "schedule": "0 22 * * 5" },
+    { "path": "/api/cron/week-planning", "schedule": "0 23 * * 0" },
+    { "path": "/api/cron/spend-warning", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/prompt-schedules", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/weekly-export", "schedule": "0 4 * * 1" }
+  ],
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/api/:path((?!(console/|console$|intake$|status$|cron/|cron$|auth/|auth$|webhooks/|webhooks$|health$)).*)",
       "destination": "https://hubserver-production-0cd1.up.railway.app/api/:path*"
     },
     {
       "source": "/auth/:path*",
-      "destination": "https://hubserver-production-0cd1.up.railway.app/auth/:path*"
+      "destination": "/api/auth/:path*"
     },
     {
       "source": "/webhooks/:path*",
-      "destination": "https://hubserver-production-0cd1.up.railway.app/webhooks/:path*"
+      "destination": "/api/webhooks/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://hubserver-production-0cd1.up.railway.app/health"
+      "destination": "/api/health"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/:path((?!api/).*)", "destination": "/index.html" }
   ]
 }

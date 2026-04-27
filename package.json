@@ -10,15 +10,18 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm typecheck:api && pnpm -r typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm -r test",
+    "test": "pnpm test:api && pnpm -r test",
+    "typecheck:api": "tsc -p tsconfig.api.json",
+    "test:api": "vitest run api/_lib/console-store.test.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm build && pnpm typecheck && pnpm test",
     "dev": "pnpm -r --parallel --filter @hub/server --filter @hub/web dev",
     "dev:server": "pnpm --filter @hub/server dev",
     "dev:web": "pnpm --filter @hub/web dev",
+    "migrate:hub:supabase": "node --no-warnings=ExperimentalWarning scripts/export-sqlite-to-supabase.mjs",
     "serve": "pnpm build && node --no-warnings=ExperimentalWarning apps/server/dist/main.js",
     "hub": "node --no-warnings=ExperimentalWarning apps/cli/dist/main.js",
     "clean": "pnpm -r exec rimraf dist node_modules .turbo && rimraf node_modules",
@@ -45,5 +48,8 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.0"
   }
 }

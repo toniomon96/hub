@@ -7,3 +7,15 @@ body,
 #root {
   height: 100%;
 }
+
+.console-page {
+  --console-bg: #0b0f0e;
+  --console-panel: rgba(18, 24, 22, 0.82);
+  --console-panel-strong: rgba(25, 33, 30, 0.92);
+  --console-line: rgba(139, 152, 144, 0.22);
+  --console-ink: #e4e9e5;
+  --console-muted: #8b9890;
+  --console-accent: #00ff88;
+  --console-warn: #ffb86c;
+  color: var(--console-ink);
+}

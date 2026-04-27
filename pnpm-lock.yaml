@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.105.0
+        version: 2.105.0
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.4
@@ -1540,6 +1544,33 @@ packages:
   '@simple-git/argv-parser@1.1.1':
     resolution: {integrity: sha512-Q9lBcfQ+VQCpQqGJFHe5yooOS5hGdLFFbJ5R+R5aDsnkPCahtn1hSkMcORX65J2Z5lxSkD0lQorMsncuBQxYUw==}
 
+  '@supabase/auth-js@2.105.0':
+    resolution: {integrity: sha512-cwNB9M4gClqOVJrlX+p2oPgqgRHiUm6hOQSRjgntplB/9XLP78/6MtvkhWdGeWpkP6npZxiLZ+VwNgeigk1wiw==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/functions-js@2.105.0':
+    resolution: {integrity: sha512-Q58EDZPb/3KM0Ksp4pUYPrShIAjoC12BRMIKlMOxcpVBYMQRZCDqr5ohRp1pKiCCvRbDD/bhiLIutdBmU5Nu6Q==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/phoenix@0.4.0':
+    resolution: {integrity: sha512-RHSx8bHS02xwfHdAbX5Lpbo6PXbgyf7lTaXTlwtFDPwOIw64NnVRwFAXGojHhjtVYI+PEPNSWwkL90f4agN3bw==}
+
+  '@supabase/postgrest-js@2.105.0':
+    resolution: {integrity: sha512-+M8mHTNEGlWXNvDEU14oL0aGQxAwGra19PO49/Gqco9iHKzgKL2xceE5CiqGOLQ547KMB/1uSFsETIKj8WQYmg==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/realtime-js@2.105.0':
+    resolution: {integrity: sha512-sU3bhcZnIT8rny4ZAR257JMjh6tBZVLvhTfczDXDKHaFZVje9Qaaqbl4O9UuuZmPsGWRfOfI1kUJ15uPeL0KhA==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/storage-js@2.105.0':
+    resolution: {integrity: sha512-advo1qhRjeNLPYciUMpGeJTVFqaidPJq/6h4FoPF3XSo2SfecBUYQg/axcy26uon7y58QZoJxxguSmRZhuiRQA==}
+    engines: {node: '>=20.0.0'}
+
+  '@supabase/supabase-js@2.105.0':
+    resolution: {integrity: sha512-UUmh6KpStf2RdKpRUmzj0cPl6OXlo1hkRTNHdFHozbiJv2MIxR/7eWGKHAO8OgnaZt0gv52k7NL/bZXgPQbw/A==}
+    engines: {node: '>=20.0.0'}
+
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
 
@@ -2493,6 +2524,10 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  iceberg-js@0.8.1:
+    resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
+    engines: {node: '>=20.0.0'}
+
   iconv-lite@0.7.2:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
     engines: {node: '>=0.10.0'}
@@ -3404,6 +3439,9 @@ packages:
 
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
+
+  tslib@2.8.1:
+    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
   tsup@8.5.1:
     resolution: {integrity: sha512-xtgkqwdhpKWr3tKPmCkvYmS9xnQK3m3XgxZHwSUjvfTjp7YfXe5tT3GgWi0F2N+ZSMsOeWeZFh7ZZFg5iPhing==}
@@ -4466,6 +4504,46 @@ snapshots:
     dependencies:
       '@simple-git/args-pathspec': 1.0.3
 
+  '@supabase/auth-js@2.105.0':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/functions-js@2.105.0':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/phoenix@0.4.0': {}
+
+  '@supabase/postgrest-js@2.105.0':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/realtime-js@2.105.0':
+    dependencies:
+      '@supabase/phoenix': 0.4.0
+      '@types/ws': 8.18.1
+      tslib: 2.8.1
+      ws: 8.20.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@supabase/storage-js@2.105.0':
+    dependencies:
+      iceberg-js: 0.8.1
+      tslib: 2.8.1
+
+  '@supabase/supabase-js@2.105.0':
+    dependencies:
+      '@supabase/auth-js': 2.105.0
+      '@supabase/functions-js': 2.105.0
+      '@supabase/postgrest-js': 2.105.0
+      '@supabase/realtime-js': 2.105.0
+      '@supabase/storage-js': 2.105.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   '@types/babel__core@7.20.5':
     dependencies:
       '@babel/parser': 7.29.2
@@ -4525,7 +4603,6 @@ snapshots:
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 25.6.0
-    optional: true
 
   '@typescript-eslint/eslint-plugin@8.58.2(@typescript-eslint/parser@8.58.2(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)':
     dependencies:
@@ -5511,6 +5588,8 @@ snapshots:
 
   husky@9.1.7: {}
 
+  iceberg-js@0.8.1: {}
+
   iconv-lite@0.7.2:
     dependencies:
       safer-buffer: 2.1.2
@@ -6428,6 +6507,8 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
+  tslib@2.8.1: {}
+
   tsup@8.5.1(jiti@1.21.7)(postcss@8.5.10)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.27.7)
@@ -6617,8 +6698,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@8.20.0:
-    optional: true
+  ws@8.20.0: {}
 
   yallist@3.1.1: {}
 

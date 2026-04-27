@@ -6,6 +6,8 @@ import { Captures } from './pages/Captures.js'
 import { Runs } from './pages/Runs.js'
 import { Brief } from './pages/Brief.js'
 import { Context } from './pages/Context.js'
+import { Console } from './pages/Console.js'
+import { ConsoleRoadmap } from './pages/ConsoleRoadmap.js'
 import { Observability } from './pages/Observability.js'
 import { Projects } from './pages/Projects.js'
 import { Settings } from './pages/Settings.js'
@@ -14,6 +16,7 @@ import { api } from './api.js'
 
 const navItems = [
   { to: '/', label: 'Dashboard' },
+  { to: '/console', label: 'Console' },
   { to: '/brief', label: 'Brief' },
   { to: '/context', label: 'Context' },
   { to: '/ask', label: 'Ask' },
@@ -28,6 +31,7 @@ const navItems = [
 export function App() {
   const location = useLocation()
   const isLogin = location.pathname.startsWith('/login')
+  const isConsole = location.pathname.startsWith('/console')
 
   if (isLogin) {
     return (
@@ -77,9 +81,16 @@ export function App() {
           </button>
         </div>
       </header>
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main
+        className={[
+          'flex-1 w-full mx-auto px-4 sm:px-6 py-6 sm:py-8',
+          isConsole ? 'max-w-7xl' : 'max-w-5xl',
+        ].join(' ')}
+      >
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/console" element={<Console />} />
+          <Route path="/console/roadmap" element={<ConsoleRoadmap />} />
           <Route path="/brief" element={<Brief />} />
           <Route path="/context" element={<Context />} />
           <Route path="/ask" element={<Ask />} />

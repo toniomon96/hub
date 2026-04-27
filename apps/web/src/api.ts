@@ -160,6 +160,142 @@ export interface AskResponse {
   costUsd?: number
 }
 
+export interface ConsoleChecklistItem {
+  text: string
+  checked: boolean
+  priority: boolean
+  children: string[]
+}
+
+export interface ConsoleOutreachRow {
+  id?: string
+  happened_on?: string
+  date: string
+  name: string
+  channel: string
+  ask: string
+  status: string
+  notes: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ConsoleTodo {
+  id: string
+  title: string
+  status: 'open' | 'done' | 'archived'
+  priority: 'normal' | 'high'
+  week_of: string
+  source: string
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ConsoleIntakeSubmission {
+  id: string
+  submitted_at: string
+  name: string
+  email: string
+  project: string
+  messy_context: string
+  already_tried: string
+  thirty_day_target: string
+  private_context: string
+  source: string
+  status: 'new' | 'reviewed' | 'fit' | 'not_fit' | 'archived'
+}
+
+export interface ConsoleRepoManifest {
+  folder: string
+  repo_id: string | null
+  display_name: string | null
+  repo_type: string | null
+  owner: string | null
+  sensitivity_tier: number | null
+  status: string | null
+  domains: string[]
+  allowed_context_consumers: string[]
+  artifact_roots: string[]
+  source_of_truth_files: string[]
+  validation_errors: string[]
+}
+
+export interface ConsoleDashboard {
+  source: {
+    adapter: 'local' | 'github'
+    playbookRoot: string | null
+    generatedAt: string
+    warnings: string[]
+  }
+  stats: Array<{
+    label: string
+    value: string
+    subtext: string
+    tone: 'ok' | 'warn' | 'empty'
+  }>
+  weekly: {
+    weekOf: string | null
+    items: ConsoleChecklistItem[]
+    emptyMessage: string
+    sourcePath: string
+  }
+  todos?: {
+    rows: ConsoleTodo[]
+    openCount: number
+    completedThisWeek: number
+    configured: boolean
+    emptyMessage: string
+    sourcePath: string
+  }
+  outreach: {
+    rows: ConsoleOutreachRow[]
+    sentThisWeek: number
+    target: number
+    configured?: boolean
+    emptyMessage: string
+    sourcePath: string
+  }
+  intake?: {
+    rows: ConsoleIntakeSubmission[]
+    newCount: number
+    configured: boolean
+    emptyMessage: string
+    sourcePath: string
+  }
+  pipeline: {
+    activeEngagements: number
+    pipelineFiles: number
+    emptyMessage: string
+    sourcePath: string
+  }
+  proofArtifacts: {
+    repos: ConsoleRepoManifest[]
+    emptyMessage: string
+  }
+  roadmap: {
+    currentPhase: string
+    principle: string | null
+    nextAction: string
+    notToBuild: string[]
+  }
+}
+
+export interface ConsoleRoadmap {
+  source: {
+    adapter: 'local' | 'github'
+    playbookRoot: string | null
+    generatedAt: string
+    warnings: string[]
+    sourcePath: string
+  }
+  title: string
+  principle: string | null
+  currentPhase: string
+  phases: Array<{ title: string; body: string }>
+  notToBuild: string[]
+  cashFlow: Array<{ period: string; expectedRevenue: string }>
+}
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -242,6 +378,57 @@ export const api = {
     request<PromptRunResult>('/api/prompts/run', {
       method: 'POST',
       body: JSON.stringify({ promptId, repo, args }),
+    }),
+  consoleDashboard: () => request<ConsoleDashboard>('/api/console/dashboard'),
+  consoleRoadmap: () => request<ConsoleRoadmap>('/api/console/roadmap'),
+  consoleTodoCreate: (body: { title: string; priority?: 'normal' | 'high'; week_of?: string }) =>
+    request<{ row: ConsoleTodo }>('/api/console/todos', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  consoleTodoUpdate: (body: {
+    id: string
+    title?: string
+    status?: 'open' | 'done' | 'archived'
+    priority?: 'normal' | 'high'
+    week_of?: string
+  }) =>
+    request<{ row: ConsoleTodo }>('/api/console/todos', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  consoleTodoArchive: (id: string) =>
+    request<{ row: ConsoleTodo }>(`/api/console/todos?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  consoleOutreachCreate: (body: {
+    happened_on?: string
+    name: string
+    channel: string
+    ask: string
+    status?: 'sent' | 'replied' | 'declined' | 'converted' | 'stale'
+    notes?: string
+  }) =>
+    request<{ row: ConsoleOutreachRow }>('/api/console/outreach', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  consoleOutreachUpdate: (body: {
+    id: string
+    happened_on?: string
+    name?: string
+    channel?: string
+    ask?: string
+    status?: 'sent' | 'replied' | 'declined' | 'converted' | 'stale'
+    notes?: string
+  }) =>
+    request<{ row: ConsoleOutreachRow }>('/api/console/outreach', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  consoleOutreachArchive: (id: string) =>
+    request<{ row: ConsoleOutreachRow }>(`/api/console/outreach?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
     }),
   registryAdd: (
     repo: string,

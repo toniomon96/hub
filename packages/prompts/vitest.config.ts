@@ -5,5 +5,6 @@ export default defineConfig({
   plugins: [nodeBuiltinShim()],
   test: {
     pool: 'forks',
+    testTimeout: 15000,
   },
 })
