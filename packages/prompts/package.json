@@ -28,7 +28,6 @@
     "@hub/shared": "workspace:*",
     "@octokit/rest": "^20.1.1",
     "drizzle-orm": "^0.45.2",
-    "expr-eval": "^2.0.2",
     "gray-matter": "^4.0.3",
     "node-cron": "^3.0.3",
     "simple-git": "^3.27.0",

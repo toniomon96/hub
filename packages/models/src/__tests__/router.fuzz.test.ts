@@ -16,6 +16,17 @@ const SENSITIVE_TOKENS = [
   'diagnosis',
 ] as const
 const PATTERNS = SENSITIVE_TOKENS.join(',')
+const BASE_SENSITIVE_REGEXPS = [
+  /salary/i,
+  /ssn/i,
+  /social.?security/i,
+  /password/i,
+  /credit.?card/i,
+  /confidential/i,
+  /hipaa/i,
+  /\bphi\b/i,
+  /bank.?account/i,
+] as const
 
 beforeEach(() => {
   _resetEnvCache()
@@ -42,7 +53,10 @@ const sensitiveInput = fc
  */
 const benignInput = fc.string({ minLength: 1, maxLength: 200 }).filter((s) => {
   const lower = s.toLowerCase()
-  return !SENSITIVE_TOKENS.some((t) => lower.includes(t))
+  return (
+    !SENSITIVE_TOKENS.some((t) => lower.includes(t)) &&
+    !BASE_SENSITIVE_REGEXPS.some((re) => re.test(s))
+  )
 })
 
 const callerSensitivity = fc.option(
