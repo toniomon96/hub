@@ -7,8 +7,6 @@
       "Bash(node -e \"const sg = require\\('simple-git'\\); console.log\\(typeof sg, typeof sg.default, Object.keys\\(sg\\).slice\\(0,10\\)\\)\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('exports',{}\\), indent=2\\)\\)\")",
       "Bash(node -e \"const pkg = require\\('./node_modules/.pnpm/simple-git@3.36.0/node_modules/simple-git/package.json'\\); console.log\\(JSON.stringify\\(pkg.exports, null, 2\\).slice\\(0,2000\\)\\)\")",
-      "Bash(node -e \"const m = require\\('./node_modules/.pnpm/expr-eval@2.0.2/node_modules/expr-eval/dist/bundle.js'\\); console.log\\(Object.keys\\(m\\).slice\\(0,20\\)\\)\")",
-      "Bash(node -e \"const pkg = require\\('./node_modules/.pnpm/expr-eval@2.0.2/node_modules/expr-eval/package.json'\\); console.log\\(JSON.stringify\\({types: pkg.types, typings: pkg.typings, main: pkg.main, exports: pkg.exports}, null, 2\\)\\)\")",
       "Bash(pnpm --filter @hub/prompts test)",
       "Bash(pnpm --filter @hub/prompts test --reporter=verbose)",
       "Bash(pnpm --filter @hub/prompts build)",
@@ -24,9 +22,7 @@
       "Bash(pnpm -r test)",
       "Bash(wait)",
       "Bash(cat apps/web/vite.config.ts)",
-      "Bash(cat apps/web/vite.config.js)",
-      "Bash(git rebase *)",
-      "Bash(git reset *)"
+      "Bash(cat apps/web/vite.config.js)"
     ],
     "additionalDirectories": ["c:\\Users\\tonimontez\\.claude\\plans"]
   }
