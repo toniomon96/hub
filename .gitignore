@@ -40,4 +40,5 @@ coverage/
 
 data/
 logs/
+.vercel/
 .env
