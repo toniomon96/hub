@@ -9,6 +9,20 @@ import { _resetEnvCache } from '@hub/shared'
 let sharedLogDir: string
 let testDirs: string[] = []
 
+function gitEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env }
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('GIT_')) {
+      delete env[key]
+    }
+  }
+  return env
+}
+
+function execGit(command: string, cwd: string): Buffer {
+  return execSync(command, { cwd, stdio: 'pipe', env: gitEnv() })
+}
+
 beforeAll(() => {
   sharedLogDir = mkdtempSync(join(tmpdir(), 'hub-edit-logs-'))
   mkdirSync(join(sharedLogDir, 'logs'), { recursive: true })
@@ -39,14 +53,14 @@ function makeRegistryRepo(targetsYaml: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'hub-edit-registry-'))
   testDirs.push(dir)
 
-  execSync('git init -b main', { cwd: dir, stdio: 'pipe' })
-  execSync('git config user.email "test@test.com"', { cwd: dir, stdio: 'pipe' })
-  execSync('git config user.name "Test"', { cwd: dir, stdio: 'pipe' })
+  execGit('git init -b main', dir)
+  execGit('git config user.email "test@test.com"', dir)
+  execGit('git config user.name "Test"', dir)
 
-  execSync('git config receive.denyCurrentBranch ignore', { cwd: dir, stdio: 'pipe' })
+  execGit('git config receive.denyCurrentBranch ignore', dir)
   writeFileSync(join(dir, 'targets.yml'), targetsYaml)
-  execSync('git add -A', { cwd: dir, stdio: 'pipe' })
-  execSync('git commit -m "init"', { cwd: dir, stdio: 'pipe' })
+  execGit('git add -A', dir)
+  execGit('git commit -m "init"', dir)
   return `file://${dir.replace(/\\/g, '/')}`
 }
 
@@ -107,9 +121,7 @@ it('comment preservation: comments survive addTarget round-trip', async () => {
   // Clone the registry and verify comments are still present
   const cloneDir = mkdtempSync(join(tmpdir(), 'hub-edit-verify-'))
   testDirs.push(cloneDir)
-  execSync(`git clone "${registryUrl.replace('file://', '')}" "${cloneDir}/verify"`, {
-    stdio: 'pipe',
-  })
+  execGit(`git clone "${registryUrl.replace('file://', '')}" "verify"`, cloneDir)
   const content = readFileSync(join(cloneDir, 'verify', 'targets.yml'), 'utf8')
   expect(content).toContain('# Hub registry')
   expect(content).toContain('# Managed by hub registry commands')
@@ -123,10 +135,7 @@ it('dry-run returns diff without committing', async () => {
 
   // Get the initial commit count
   const repoDir = registryUrl.replace('file://', '')
-  const initialLog = execSync('git log --oneline', { cwd: repoDir, stdio: 'pipe' })
-    .toString()
-    .trim()
-    .split('\n').length
+  const initialLog = execGit('git log --oneline', repoDir).toString().trim().split('\n').length
 
   const { addTarget } = await import('../edit.js')
   const result = await addTarget({ repo: 'org/dry-run-repo', dryRun: true })
@@ -136,10 +145,7 @@ it('dry-run returns diff without committing', async () => {
   expect(result.commitSha).toBeUndefined()
 
   // Verify no new commit was created
-  const afterLog = execSync('git log --oneline', { cwd: repoDir, stdio: 'pipe' })
-    .toString()
-    .trim()
-    .split('\n').length
+  const afterLog = execGit('git log --oneline', repoDir).toString().trim().split('\n').length
   expect(afterLog).toBe(initialLog)
 })
 
@@ -166,7 +172,7 @@ it('addTarget is idempotent: re-running updates branch, leaves existing targets 
   // Verify the existing target binding is still there
   const cloneDir = mkdtempSync(join(tmpdir(), 'hub-edit-verify2-'))
   testDirs.push(cloneDir)
-  execSync(`git clone "${registryUrl.replace('file://', '')}" "${cloneDir}/v"`, { stdio: 'pipe' })
+  execGit(`git clone "${registryUrl.replace('file://', '')}" "v"`, cloneDir)
   const content = readFileSync(join(cloneDir, 'v', 'targets.yml'), 'utf8')
   expect(content).toContain('daily-review')
 })
@@ -225,7 +231,7 @@ it('add → wire → remove lifecycle leaves an empty targets list', async () =>
 
   const cloneDir = mkdtempSync(join(tmpdir(), 'hub-edit-lifecycle-'))
   testDirs.push(cloneDir)
-  execSync(`git clone "${registryUrl.replace('file://', '')}" "${cloneDir}/l"`, { stdio: 'pipe' })
+  execGit(`git clone "${registryUrl.replace('file://', '')}" "l"`, cloneDir)
   const content = readFileSync(join(cloneDir, 'l', 'targets.yml'), 'utf8')
   // Repo block still present but no daily-review binding
   expect(content).toContain('org/lifecycle-repo')
@@ -237,10 +243,7 @@ it('validation failure aborts without committing', async () => {
   await freshEnv(registryUrl)
 
   const repoDir = registryUrl.replace('file://', '')
-  const logBefore = execSync('git log --oneline', { cwd: repoDir, stdio: 'pipe' })
-    .toString()
-    .trim()
-    .split('\n').length
+  const logBefore = execGit('git log --oneline', repoDir).toString().trim().split('\n').length
 
   // wirePrompt on a repo that doesn't exist throws before writing
   const { wirePrompt } = await import('../edit.js')
@@ -248,9 +251,6 @@ it('validation failure aborts without committing', async () => {
     wirePrompt({ repo: 'org/not-added', promptId: 'foo', trigger: 'manual' }),
   ).rejects.toThrow(/not in registry/)
 
-  const logAfter = execSync('git log --oneline', { cwd: repoDir, stdio: 'pipe' })
-    .toString()
-    .trim()
-    .split('\n').length
+  const logAfter = execGit('git log --oneline', repoDir).toString().trim().split('\n').length
   expect(logAfter).toBe(logBefore)
 })

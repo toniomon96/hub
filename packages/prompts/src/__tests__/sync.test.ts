@@ -9,6 +9,20 @@ import { _resetEnvCache } from '@hub/shared'
 let sharedLogDir: string
 let testDirs: string[] = []
 
+function gitEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env }
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('GIT_')) {
+      delete env[key]
+    }
+  }
+  return env
+}
+
+function execGit(command: string, cwd: string): Buffer {
+  return execSync(command, { cwd, stdio: 'pipe', env: gitEnv() })
+}
+
 beforeAll(() => {
   sharedLogDir = mkdtempSync(join(tmpdir(), 'hub-sync-logs-'))
   mkdirSync(join(sharedLogDir, 'logs'), { recursive: true })
@@ -37,16 +51,16 @@ function makePromptRepo(prompts: Array<{ name: string; content: string }>): stri
   const dir = mkdtempSync(join(tmpdir(), 'hub-sync-prompts-'))
   testDirs.push(dir)
 
-  execSync('git init -b main', { cwd: dir, stdio: 'pipe' })
-  execSync('git config user.email "test@test.com"', { cwd: dir, stdio: 'pipe' })
-  execSync('git config user.name "Test"', { cwd: dir, stdio: 'pipe' })
+  execGit('git init -b main', dir)
+  execGit('git config user.email "test@test.com"', dir)
+  execGit('git config user.name "Test"', dir)
 
   mkdirSync(join(dir, 'prompts'), { recursive: true })
   for (const p of prompts) {
     writeFileSync(join(dir, 'prompts', p.name), p.content)
   }
-  execSync('git add -A', { cwd: dir, stdio: 'pipe' })
-  execSync('git commit -m "init"', { cwd: dir, stdio: 'pipe' })
+  execGit('git add -A', dir)
+  execGit('git commit -m "init"', dir)
   return `file://${dir.replace(/\\/g, '/')}`
 }
 
@@ -54,13 +68,13 @@ function makeRegistryRepo(targetsYaml: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'hub-sync-registry-'))
   testDirs.push(dir)
 
-  execSync('git init -b main', { cwd: dir, stdio: 'pipe' })
-  execSync('git config user.email "test@test.com"', { cwd: dir, stdio: 'pipe' })
-  execSync('git config user.name "Test"', { cwd: dir, stdio: 'pipe' })
+  execGit('git init -b main', dir)
+  execGit('git config user.email "test@test.com"', dir)
+  execGit('git config user.name "Test"', dir)
 
   writeFileSync(join(dir, 'targets.yml'), targetsYaml)
-  execSync('git add -A', { cwd: dir, stdio: 'pipe' })
-  execSync('git commit -m "init"', { cwd: dir, stdio: 'pipe' })
+  execGit('git add -A', dir)
+  execGit('git commit -m "init"', dir)
   return `file://${dir.replace(/\\/g, '/')}`
 }
 

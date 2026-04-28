@@ -4,7 +4,7 @@ import YAML from 'yaml'
 import type { Document, YAMLMap, YAMLSeq } from 'yaml'
 import { withLease } from '@hub/db'
 import { loadEnv, getLogger } from '@hub/shared'
-import { shallowClone, buildAuthUrl } from './git.js'
+import { shallowClone, buildAuthUrl, cleanGitEnv } from './git.js'
 import { RegistryFile } from './schema.js'
 import { syncPrompts, type SyncResult } from './sync.js'
 import { simpleGit } from 'simple-git'
@@ -227,7 +227,7 @@ async function runMutation(
 
     writeFileSync(targetsPath, newContent, 'utf8')
 
-    const repoGit = simpleGit(dir)
+    const repoGit = simpleGit(dir).env(cleanGitEnv())
     const diff = await repoGit.diff(['targets.yml'])
 
     if (dryRun) {
