@@ -18,6 +18,7 @@ export interface RunStreamOptions {
   permissionTier?: 'R0' | 'R1' | 'R2' | 'R3'
   systemPrompt?: string
   allowedTools?: string[]
+  requestedScopes?: McpScopeName[]
   /** Abort signal — when aborted, the generator finalizes the run as `partial`. */
   signal?: AbortSignal
 }
@@ -96,7 +97,17 @@ export async function* runStream(
   })
 
   const modelUsed = `${decision.spec.provider}:${decision.spec.model}`
-  const fullSystemPrompt = assembleSystemPrompt(opts.systemPrompt)
+  const fullSystemPrompt = assembleSystemPrompt({
+    taskSpecific: opts.systemPrompt,
+    mode: task.assistantMode,
+    lifeArea: task.lifeAreaHint,
+    governorDomain: task.governorDomain ?? task.domainHint,
+    projectRef: task.projectRef,
+    appliedScopes: scopeNames,
+    deniedScopes: (opts.requestedScopes ?? [])
+      .filter((scope) => !scopeNames.includes(scope))
+      .map((scope) => ({ scope, reason: 'not approved for this run' })),
+  })
   yield { type: 'meta', runId, modelUsed }
 
   let accumulated = ''

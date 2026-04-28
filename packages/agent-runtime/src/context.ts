@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, parse, resolve } from 'node:path'
 import { withLease } from '@hub/db'
 import { getLogger } from '@hub/shared'
 
@@ -14,10 +14,11 @@ const CHARS_PER_TOKEN = 4
 // Order matters — model attention weights earlier content more heavily.
 const PRIORITY_SECTIONS = [
   'Active Projects',
-  'Commitments',
+  'Planning and Commitments',
   'Plural Self',
+  'Health and Energy',
+  'Business and Ideas',
   'Engineering Conventions',
-  'Decisions',
 ]
 
 const DEFAULT_COMMANDMENTS = `# Hub Commandments
@@ -34,22 +35,31 @@ These are hard refusals. Edit deliberately, not impulsively. Not at 2am.
 function makeDefaultContext(): string {
   return `---
 updated: ${new Date().toISOString().slice(0, 10)}
-version: 1
+version: 2
 ---
 
 ## Active Projects
 <!-- What you are building right now + status -->
 
-## People
-<!-- key:name tags:important|colleague|family last_contact:YYYY-MM-DD -->
+## Family and Relationships
+<!-- People, obligations, and presence requirements that should shape planning -->
+
+## Health and Energy
+<!-- Sleep, training, recovery, travel fatigue, health constraints -->
+
+## Work and Career
+<!-- Employment commitments, deadlines, and reputation-sensitive work -->
+
+## Business and Ideas
+<!-- Founder priorities, product bets, writing, and idea pipeline -->
+
+## Planning and Commitments
+<!-- Promises made, follow-ups owed, deadlines, and finite-calendar constraints -->
 
 ## Plural Self
 <!-- Named selves + their declared needs -->
 <!-- - **Toni-the-founder**: needs uninterrupted deep work blocks -->
-<!-- - **Toni-the-father**: needs evening presence, weekend protection -->
-
-## Commitments
-<!-- Promises made, follow-ups owed, deadlines -->
+<!-- - **Toni-the-family-man**: needs evening presence and weekend protection -->
 
 ## Decisions
 <!-- Architectural + life decisions with date + reasoning -->
@@ -72,23 +82,47 @@ version: 1
 ## Domain Authority
 <!-- Per-domain trust level. Format: "- domain-name: suggest|draft|act" -->
 <!-- Defaults to suggest for any unlisted domain. -->
-<!-- - context.md writes: act    (internal only — no external blast radius) -->
-<!-- - Gmail drafts: suggest      (not yet earned draft authority) -->
-<!-- - Todoist task creation: suggest -->
-<!-- - GitHub PR creation: suggest  (high blast radius — hold at suggest) -->
-<!-- - Calendar creates: suggest -->
-<!-- - Financial actions: suggest  (commandment — never above suggest) -->
+- family: suggest
+- health: suggest
+- planning: draft
+- work: suggest
+- business: suggest
+- ideas: suggest
+- Todoist task creation: suggest
+- GitHub PR creation: suggest
+- Calendar creates: suggest
+
+## Protected Emptiness
+<!-- Unstructured thinking time, recovery blocks, and anti-overload constraints -->
 
 ## Stale
 <!-- Entries moved here for confirmation before deletion -->`
 }
 
 function contextPath(): string {
-  return resolve(process.env['HUB_CONTEXT_PATH'] ?? './data/context.md')
+  return resolveHubDataPath(process.env['HUB_CONTEXT_PATH'], 'data/context.md')
 }
 
 function commandmentsPath(): string {
-  return resolve(process.env['HUB_COMMANDMENTS_PATH'] ?? './data/commandments.md')
+  return resolveHubDataPath(process.env['HUB_COMMANDMENTS_PATH'], 'data/commandments.md')
+}
+
+export function resolveHubDataPath(explicitPath: string | undefined, relativePath: string): string {
+  if (explicitPath) return resolve(explicitPath)
+
+  const direct = resolve(relativePath)
+  if (existsSync(direct)) return direct
+
+  let current = process.cwd()
+  while (true) {
+    const candidate = join(current, relativePath)
+    if (existsSync(candidate)) return candidate
+    const parent = dirname(current)
+    if (parent === current || current === parse(current).root) break
+    current = parent
+  }
+
+  return direct
 }
 
 // --- Commandments -----------------------------------------------------------

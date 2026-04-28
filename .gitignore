@@ -16,7 +16,6 @@ dist/
 # local state (Hub runtime data)
 .hub/
 ~/.hub/
-data/
 *.db
 *.db-shm
 *.db-wal
@@ -36,6 +35,16 @@ Thumbs.db
 coverage/
 .nyc_output/
 
-data/
+data/*
+!data/assistant-constitution.md
+!data/domain-governors.json
+!data/context.md
+!data/commandments.md
+data/*.db
+data/*.db-shm
+data/*.db-wal
 logs/
 .env
+
+.vercel
+.claude/settings.local.json

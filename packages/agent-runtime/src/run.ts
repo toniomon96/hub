@@ -24,6 +24,8 @@ export interface RunOptions {
   systemPrompt?: string
   /** Restrict SDK tools (allowlist). Empty = SDK defaults. */
   allowedTools?: string[]
+  /** Original requested scopes for policy-visible ask surfaces. */
+  requestedScopes?: McpScopeName[]
   // Prompt orchestration context — forwarded to startRun() for audit trail
   promptId?: string
   promptVersion?: number
@@ -119,7 +121,17 @@ export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
     'agent run',
   )
 
-  const fullSystemPrompt = assembleSystemPrompt(opts.systemPrompt)
+  const fullSystemPrompt = assembleSystemPrompt({
+    taskSpecific: opts.systemPrompt,
+    mode: task.assistantMode,
+    lifeArea: task.lifeAreaHint,
+    governorDomain: task.governorDomain ?? task.domainHint,
+    projectRef: task.projectRef,
+    appliedScopes: scopeNames,
+    deniedScopes: (opts.requestedScopes ?? [])
+      .filter((scope) => !scopeNames.includes(scope))
+      .map((scope) => ({ scope, reason: 'not approved for this run' })),
+  })
 
   try {
     if (decision.spec.provider === 'ollama') {

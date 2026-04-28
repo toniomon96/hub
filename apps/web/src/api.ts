@@ -158,6 +158,181 @@ export interface AskResponse {
   inputTokens?: number
   outputTokens?: number
   costUsd?: number
+  appliedMode?: 'clarify' | 'govern' | 'execute'
+  lifeArea?:
+    | 'family'
+    | 'personal'
+    | 'health'
+    | 'planning'
+    | 'work'
+    | 'relationships'
+    | 'business'
+    | 'ideas'
+    | 'misc'
+  projectRef?: string
+  governorDomain?: string
+  appliedScopes?: Array<'knowledge' | 'workspace' | 'tasks' | 'code' | 'system'>
+  deniedScopes?: Array<{
+    scope: 'knowledge' | 'workspace' | 'tasks' | 'code' | 'system'
+    reason: string
+  }>
+  authority?: 'suggest' | 'draft' | 'act'
+}
+
+export interface AskRequest {
+  input: string
+  forceLocal?: boolean
+  mode?: 'clarify' | 'govern' | 'execute'
+  lifeArea?:
+    | 'family'
+    | 'personal'
+    | 'health'
+    | 'planning'
+    | 'work'
+    | 'relationships'
+    | 'business'
+    | 'ideas'
+    | 'misc'
+  projectRef?: string
+  requestedScopes?: Array<'knowledge' | 'workspace' | 'tasks' | 'code' | 'system'>
+  governorDomain?: string
+}
+
+export interface ConsoleChecklistItem {
+  text: string
+  checked: boolean
+  priority: boolean
+  children: string[]
+}
+
+export interface ConsoleOutreachRow {
+  id?: string
+  happened_on?: string
+  date: string
+  name: string
+  channel: string
+  ask: string
+  status: string
+  notes: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ConsoleTodo {
+  id: string
+  title: string
+  status: 'open' | 'done' | 'archived'
+  priority: 'normal' | 'high'
+  week_of: string
+  source: string
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ConsoleIntakeSubmission {
+  id: string
+  submitted_at: string
+  name: string
+  email: string
+  project: string
+  messy_context: string
+  already_tried: string
+  thirty_day_target: string
+  private_context: string
+  source: string
+  status: 'new' | 'reviewed' | 'fit' | 'not_fit' | 'archived'
+}
+
+export interface ConsoleRepoManifest {
+  folder: string
+  repo_id: string | null
+  display_name: string | null
+  repo_type: string | null
+  owner: string | null
+  sensitivity_tier: number | null
+  status: string | null
+  domains: string[]
+  allowed_context_consumers: string[]
+  artifact_roots: string[]
+  source_of_truth_files: string[]
+  validation_errors: string[]
+}
+
+export interface ConsoleDashboard {
+  source: {
+    adapter: 'local' | 'github'
+    playbookRoot: string | null
+    generatedAt: string
+    warnings: string[]
+  }
+  stats: Array<{
+    label: string
+    value: string
+    subtext: string
+    tone: 'ok' | 'warn' | 'empty'
+  }>
+  weekly: {
+    weekOf: string | null
+    items: ConsoleChecklistItem[]
+    emptyMessage: string
+    sourcePath: string
+  }
+  todos?: {
+    rows: ConsoleTodo[]
+    openCount: number
+    completedThisWeek: number
+    configured: boolean
+    emptyMessage: string
+    sourcePath: string
+  }
+  outreach: {
+    rows: ConsoleOutreachRow[]
+    sentThisWeek: number
+    target: number
+    configured?: boolean
+    emptyMessage: string
+    sourcePath: string
+  }
+  intake?: {
+    rows: ConsoleIntakeSubmission[]
+    newCount: number
+    configured: boolean
+    emptyMessage: string
+    sourcePath: string
+  }
+  pipeline: {
+    activeEngagements: number
+    pipelineFiles: number
+    emptyMessage: string
+    sourcePath: string
+  }
+  proofArtifacts: {
+    repos: ConsoleRepoManifest[]
+    emptyMessage: string
+  }
+  roadmap: {
+    currentPhase: string
+    principle: string | null
+    nextAction: string
+    notToBuild: string[]
+  }
+}
+
+export interface ConsoleRoadmap {
+  source: {
+    adapter: 'local' | 'github'
+    playbookRoot: string | null
+    generatedAt: string
+    warnings: string[]
+    sourcePath: string
+  }
+  title: string
+  principle: string | null
+  currentPhase: string
+  phases: Array<{ title: string; body: string }>
+  notToBuild: string[]
+  cashFlow: Array<{ period: string; expectedRevenue: string }>
 }
 
 export interface ConsoleChecklistItem {
@@ -354,10 +529,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ section, entry }),
     }),
-  ask: (input: string, forceLocal = false) =>
+  ask: (body: AskRequest) =>
     request<AskResponse>('/api/ask', {
       method: 'POST',
-      body: JSON.stringify({ input, forceLocal }),
+      body: JSON.stringify(body),
     }),
   obsRuns: (since?: string, limit?: number) =>
     request<ObsRun[]>(`/api/observability/runs?since=${since ?? '7d'}&limit=${limit ?? 50}`),

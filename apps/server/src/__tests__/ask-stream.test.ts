@@ -8,6 +8,14 @@ import { seedTestEnv, restoreTestEnv } from '@hub/shared/testing/test-env'
  */
 
 vi.mock('@hub/agent-runtime', () => ({
+  resolveAskPolicy: async () => ({
+    mode: 'clarify',
+    governorDomain: 'misc',
+    authority: 'suggest',
+    appliedScopes: ['knowledge'],
+    deniedScopes: [],
+    permissionTier: 'R0',
+  }),
   runStream: async function* () {
     yield { type: 'meta', runId: 'run-test-1', modelUsed: 'ollama:phi4-mini' }
     yield { type: 'token', text: 'hello ' }
@@ -61,11 +69,15 @@ describe('POST /api/ask/stream', () => {
     }
     const parsed = frames.map(parse)
     expect(parsed.map((p) => p.event)).toEqual(['meta', 'token', 'token', 'final'])
-    expect(parsed[0]!.data).toEqual({ runId: 'run-test-1', modelUsed: 'ollama:phi4-mini' })
+    expect(parsed[0]!.data.runId).toBe('run-test-1')
+    expect(parsed[0]!.data.modelUsed).toBe('ollama:phi4-mini')
+    expect(parsed[0]!.data.appliedMode).toBe('clarify')
+    expect(parsed[0]!.data.appliedScopes).toEqual(['knowledge'])
     expect(parsed[1]!.data).toEqual({ text: 'hello ' })
     expect(parsed[2]!.data).toEqual({ text: 'world' })
     expect(parsed[3]!.data.output).toBe('hello world')
     expect(parsed[3]!.data.status).toBe('success')
+    expect(parsed[3]!.data.appliedScopes).toEqual(['knowledge'])
   })
 
   it('returns 400 on missing input', async () => {

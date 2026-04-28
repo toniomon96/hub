@@ -40,6 +40,8 @@ describe('GET /api/openapi.json', () => {
       ['/briefings', 'get'],
       ['/briefings/{date}', 'get'],
       ['/settings', 'get'],
+      ['/console/dashboard', 'get'],
+      ['/console/roadmap', 'get'],
     ]
     for (const [path, method] of expected) {
       expect(doc.paths[path], `missing path ${path}`).toBeDefined()

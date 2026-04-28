@@ -153,7 +153,7 @@ describe('runStream (Ollama path)', () => {
 
     const system = lastCreateArgs?.messages[0]
     expect(system?.role).toBe('system')
-    expect(system?.content).toContain('You are Hub — a precision cognitive tool')
+    expect(system?.content).toContain("You are Toni Montez's personal operating system")
     expect(system?.content).toContain('Task-specific instruction.')
   }, 30000)
 

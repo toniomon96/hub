@@ -1,10 +1,24 @@
 import { z } from './z.js'
 import { IdString } from './primitives.js'
+import { AskMode, LifeArea } from '../types.js'
+
+const ScopeName = z.enum(['knowledge', 'workspace', 'tasks', 'code', 'system'])
+const ScopeDecision = z.object({
+  scope: ScopeName,
+  reason: z.string(),
+})
 
 export const AskRequest = z
   .object({
     input: z.string().min(1),
     forceLocal: z.boolean().optional(),
+    mode: AskMode.optional(),
+    lifeArea: LifeArea.optional(),
+    projectRef: z.string().min(1).optional(),
+    requestedScopes: z.array(ScopeName).max(5).optional(),
+    governorDomain: z.string().min(1).optional(),
+    /** Legacy compatibility input — mapped to lifeArea at the API edge. */
+    domain: z.string().min(1).optional(),
   })
   .openapi('AskRequest')
 export type AskRequest = z.infer<typeof AskRequest>
@@ -18,6 +32,13 @@ export const AskResponse = z
     inputTokens: z.number().int().optional(),
     outputTokens: z.number().int().optional(),
     costUsd: z.number().optional(),
+    appliedMode: AskMode.optional(),
+    lifeArea: LifeArea.optional(),
+    projectRef: z.string().optional(),
+    governorDomain: z.string().optional(),
+    appliedScopes: z.array(ScopeName).optional(),
+    deniedScopes: z.array(ScopeDecision).optional(),
+    authority: z.enum(['suggest', 'draft', 'act']).optional(),
   })
   .openapi('AskResponse')
 export type AskResponse = z.infer<typeof AskResponse>
@@ -36,6 +57,13 @@ export const AskStreamMeta = z
   .object({
     runId: IdString,
     modelUsed: z.string(),
+    appliedMode: AskMode.optional(),
+    lifeArea: LifeArea.optional(),
+    projectRef: z.string().optional(),
+    governorDomain: z.string().optional(),
+    appliedScopes: z.array(ScopeName).optional(),
+    deniedScopes: z.array(ScopeDecision).optional(),
+    authority: z.enum(['suggest', 'draft', 'act']).optional(),
   })
   .openapi('AskStreamMeta')
 export type AskStreamMeta = z.infer<typeof AskStreamMeta>

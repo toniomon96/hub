@@ -5,6 +5,7 @@ import { existsSync, statSync } from 'node:fs'
 import { getDb } from '@hub/db'
 import { runs, captures, agentLocks, briefings, feedback } from '@hub/db/schema'
 import { getLogger, loadEnv } from '@hub/shared'
+import { loadConsoleDashboard, loadConsoleRoadmap } from './console-data.js'
 import {
   ErrorEnvelope,
   StatusResponse,
@@ -248,13 +249,48 @@ const askRoute = createRoute({
 
 api.openapi(askRoute, async (c) => {
   const body = c.req.valid('json')
-  const { run } = await import('@hub/agent-runtime')
+  const { run, resolveAskPolicy } = await import('@hub/agent-runtime')
   try {
+    const policy = await resolveAskPolicy({
+      mode: body.mode,
+      lifeArea: body.lifeArea,
+      projectRef: body.projectRef,
+      requestedScopes: body.requestedScopes,
+      governorDomain: body.governorDomain,
+      legacyDomain: body.domain,
+    })
     const result = await run(
-      { input: body.input, source: 'pwa', forceLocal: !!body.forceLocal },
-      { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'] },
+      {
+        input: body.input,
+        source: 'pwa',
+        forceLocal: !!body.forceLocal,
+        assistantMode: policy.mode,
+        ...(policy.lifeArea ? { lifeAreaHint: policy.lifeArea } : {}),
+        ...(body.projectRef ? { projectRef: body.projectRef } : {}),
+        governorDomain: policy.governorDomain,
+      },
+      {
+        agentName: 'ask-oneshot',
+        scopes: policy.appliedScopes,
+        requestedScopes: (body.requestedScopes ?? []).filter((scope) =>
+          ['knowledge', 'workspace', 'tasks', 'code', 'system'].includes(scope),
+        ) as Array<'knowledge' | 'workspace' | 'tasks' | 'code' | 'system'>,
+        permissionTier: policy.permissionTier,
+      },
     )
-    return c.json(result, 200)
+    return c.json(
+      {
+        ...result,
+        appliedMode: policy.mode,
+        ...(policy.lifeArea ? { lifeArea: policy.lifeArea } : {}),
+        ...(body.projectRef ? { projectRef: body.projectRef } : {}),
+        governorDomain: policy.governorDomain,
+        appliedScopes: policy.appliedScopes,
+        deniedScopes: policy.deniedScopes,
+        authority: policy.authority,
+      },
+      200,
+    )
   } catch (err) {
     log.error({ err: err instanceof Error ? err.message : err }, 'ask failed')
     return c.json({ error: err instanceof Error ? err.message : 'unknown' }, 500)
@@ -272,17 +308,25 @@ api.openapi(askRoute, async (c) => {
  * generator within one iteration, which finalizes the run as `partial`.
  */
 api.post('/ask/stream', async (c) => {
-  let body: { input: string; forceLocal?: boolean }
+  let parsedBody: unknown
   try {
-    body = (await c.req.json()) as { input: string; forceLocal?: boolean }
+    parsedBody = await c.req.json()
   } catch {
     return c.json({ error: 'invalid json' }, 400)
   }
-  if (!body?.input || typeof body.input !== 'string') {
-    return c.json({ error: 'input required' }, 400)
-  }
+  const parsed = AskRequest.safeParse(parsedBody)
+  if (!parsed.success) return c.json({ error: 'input required' }, 400)
+  const body = parsed.data
 
-  const { runStream } = await import('@hub/agent-runtime')
+  const { runStream, resolveAskPolicy } = await import('@hub/agent-runtime')
+  const policy = await resolveAskPolicy({
+    mode: body.mode,
+    lifeArea: body.lifeArea,
+    projectRef: body.projectRef,
+    requestedScopes: body.requestedScopes,
+    governorDomain: body.governorDomain,
+    legacyDomain: body.domain,
+  })
   const ctrl = new AbortController()
   c.req.raw.signal?.addEventListener('abort', () => ctrl.abort(), { once: true })
 
@@ -295,15 +339,51 @@ api.post('/ask/stream', async (c) => {
       }
       try {
         for await (const ev of runStream(
-          { input: body.input, source: 'pwa', forceLocal: !!body.forceLocal },
-          { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'], signal: ctrl.signal },
+          {
+            input: body.input,
+            source: 'pwa',
+            forceLocal: !!body.forceLocal,
+            assistantMode: policy.mode,
+            ...(policy.lifeArea ? { lifeAreaHint: policy.lifeArea } : {}),
+            ...(body.projectRef ? { projectRef: body.projectRef } : {}),
+            governorDomain: policy.governorDomain,
+          },
+          {
+            agentName: 'ask-oneshot',
+            scopes: policy.appliedScopes,
+            requestedScopes: (body.requestedScopes ?? []).filter((scope) =>
+              ['knowledge', 'workspace', 'tasks', 'code', 'system'].includes(scope),
+            ) as Array<'knowledge' | 'workspace' | 'tasks' | 'code' | 'system'>,
+            permissionTier: policy.permissionTier,
+            signal: ctrl.signal,
+          },
         )) {
-          if (ev.type === 'meta') write('meta', { runId: ev.runId, modelUsed: ev.modelUsed })
-          else if (ev.type === 'token') write('token', { text: ev.text })
+          if (ev.type === 'meta') {
+            write('meta', {
+              runId: ev.runId,
+              modelUsed: ev.modelUsed,
+              appliedMode: policy.mode,
+              ...(policy.lifeArea ? { lifeArea: policy.lifeArea } : {}),
+              ...(body.projectRef ? { projectRef: body.projectRef } : {}),
+              governorDomain: policy.governorDomain,
+              appliedScopes: policy.appliedScopes,
+              deniedScopes: policy.deniedScopes,
+              authority: policy.authority,
+            })
+          } else if (ev.type === 'token') write('token', { text: ev.text })
           else if (ev.type === 'final') {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { type: _t, ...payload } = ev
-            write('final', payload)
+            write('final', {
+              ...payload,
+              appliedMode: policy.mode,
+              ...(policy.lifeArea ? { lifeArea: policy.lifeArea } : {}),
+              ...(body.projectRef ? { projectRef: body.projectRef } : {}),
+              governorDomain: policy.governorDomain,
+              appliedScopes: policy.appliedScopes,
+              deniedScopes: policy.deniedScopes,
+              authority: policy.authority,
+            })
           } else {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { type: _t, ...payload } = ev
@@ -543,6 +623,141 @@ api.openapi(settingsRoute, (c) => {
     },
     200,
   )
+})
+
+// ───────────────────── GET /api/console/dashboard ─────────────────────
+const ConsoleSourceSchema = z.object({
+  adapter: z.enum(['local', 'github']),
+  playbookRoot: z.string().nullable(),
+  generatedAt: z.string(),
+  warnings: z.array(z.string()),
+})
+
+const ConsoleChecklistItemSchema = z.object({
+  text: z.string(),
+  checked: z.boolean(),
+  priority: z.boolean(),
+  children: z.array(z.string()),
+})
+
+const ConsoleRepoManifestSchema = z.object({
+  folder: z.string(),
+  repo_id: z.string().nullable(),
+  display_name: z.string().nullable(),
+  repo_type: z.string().nullable(),
+  owner: z.string().nullable(),
+  sensitivity_tier: z.number().nullable(),
+  status: z.string().nullable(),
+  domains: z.array(z.string()),
+  allowed_context_consumers: z.array(z.string()),
+  artifact_roots: z.array(z.string()),
+  source_of_truth_files: z.array(z.string()),
+  validation_errors: z.array(z.string()),
+})
+
+const ConsoleDashboardResponse = z.object({
+  source: ConsoleSourceSchema,
+  stats: z.array(
+    z.object({
+      label: z.string(),
+      value: z.string(),
+      subtext: z.string(),
+      tone: z.enum(['ok', 'warn', 'empty']),
+    }),
+  ),
+  weekly: z.object({
+    weekOf: z.string().nullable(),
+    items: z.array(ConsoleChecklistItemSchema),
+    emptyMessage: z.string(),
+    sourcePath: z.string(),
+  }),
+  outreach: z.object({
+    rows: z.array(
+      z.object({
+        date: z.string(),
+        name: z.string(),
+        channel: z.string(),
+        ask: z.string(),
+        status: z.string(),
+        notes: z.string(),
+      }),
+    ),
+    sentThisWeek: z.number(),
+    target: z.number(),
+    emptyMessage: z.string(),
+    sourcePath: z.string(),
+  }),
+  pipeline: z.object({
+    activeEngagements: z.number(),
+    pipelineFiles: z.number(),
+    emptyMessage: z.string(),
+    sourcePath: z.string(),
+  }),
+  proofArtifacts: z.object({
+    repos: z.array(ConsoleRepoManifestSchema),
+    emptyMessage: z.string(),
+  }),
+  roadmap: z.object({
+    currentPhase: z.string(),
+    principle: z.string().nullable(),
+    nextAction: z.string(),
+    notToBuild: z.array(z.string()),
+  }),
+})
+
+const ConsoleRoadmapResponse = z.object({
+  source: ConsoleSourceSchema.extend({ sourcePath: z.string() }),
+  title: z.string(),
+  principle: z.string().nullable(),
+  currentPhase: z.string(),
+  phases: z.array(z.object({ title: z.string(), body: z.string() })),
+  notToBuild: z.array(z.string()),
+  cashFlow: z.array(z.object({ period: z.string(), expectedRevenue: z.string() })),
+})
+
+const consoleDashboardRoute = createRoute({
+  method: 'get',
+  path: '/console/dashboard',
+  responses: {
+    200: {
+      description: 'Read-only consulting console dashboard',
+      content: json(ConsoleDashboardResponse),
+    },
+    500: errorResp('Console dashboard load failed'),
+  },
+})
+
+api.openapi(consoleDashboardRoute, async (c) => {
+  try {
+    return c.json(await loadConsoleDashboard(), 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'console dashboard load failed')
+    return c.json({ error: message }, 500)
+  }
+})
+
+// ────────────────────── GET /api/console/roadmap ───────────────────────
+const consoleRoadmapRoute = createRoute({
+  method: 'get',
+  path: '/console/roadmap',
+  responses: {
+    200: {
+      description: 'Read-only consulting roadmap view',
+      content: json(ConsoleRoadmapResponse),
+    },
+    500: errorResp('Console roadmap load failed'),
+  },
+})
+
+api.openapi(consoleRoadmapRoute, async (c) => {
+  try {
+    return c.json(await loadConsoleRoadmap(), 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.error({ err: message }, 'console roadmap load failed')
+    return c.json({ error: message }, 500)
+  }
 })
 
 // ─────────────────── POST /api/prompts/sync ─────────────────────────────

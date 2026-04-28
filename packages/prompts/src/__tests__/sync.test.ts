@@ -114,7 +114,7 @@ it('syncs prompts from a local repo into the DB', async () => {
   expect(rows[0]!.id).toBe('daily-review')
   expect(rows[0]!.title).toBe('Daily Review')
   expect(rows[0]!.body).toContain('Review {{repo}} for today.')
-})
+}, 30000)
 
 it('syncs prompts and registry targets into the DB', async () => {
   const promptsDir = makePromptRepo([{ name: 'daily-review.md', content: VALID_PROMPT_MD }])

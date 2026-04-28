@@ -46,7 +46,8 @@ export function route(task: Task, opts: RouteOpts = {}): RouterDecision {
   const callerSens = opts.triage?.sensitivity
   const sensitivity = maxSensitivity(regexSens, callerSens)
   const complexity = opts.triage?.complexity ?? detectComplexity(task.input)
-  const domain = opts.triage?.domain ?? task.domainHint ?? 'misc'
+  const domain =
+    opts.triage?.domain ?? task.governorDomain ?? task.lifeAreaHint ?? task.domainHint ?? 'misc'
   const localOnly = task.forceLocal || sensitivity === 'high'
 
   const triage: Triage = { sensitivity, complexity, domain, localOnly }

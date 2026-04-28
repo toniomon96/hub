@@ -73,11 +73,15 @@ it('dispatches a prompt run and returns a runId', async () => {
   const targetId = await seedPromptAndTarget()
 
   // Mock the heavy dependencies
-  vi.doMock('@hub/agent-runtime/run', () => ({
-    run: vi
-      .fn()
-      .mockResolvedValue({ runId: 'run-abc', output: '## Summary\nDone.', modelUsed: 'test' }),
-  }))
+  vi.doMock('@hub/agent-runtime', async () => {
+    const actual = (await vi.importActual('@hub/agent-runtime')) as Record<string, unknown>
+    return {
+      ...actual,
+      run: vi
+        .fn()
+        .mockResolvedValue({ runId: 'run-abc', output: '## Summary\nDone.', modelUsed: 'test' }),
+    }
+  })
   vi.doMock('../outputs.js', () => ({
     handleOutputs: vi.fn().mockResolvedValue(undefined),
   }))
@@ -98,14 +102,18 @@ it('skips output handlers when the prompt run fails', async () => {
   const targetId = await seedPromptAndTarget()
   const handleOutputs = vi.fn().mockResolvedValue(undefined)
 
-  vi.doMock('@hub/agent-runtime/run', () => ({
-    run: vi.fn().mockResolvedValue({
-      runId: 'run-failed',
-      output: '',
-      modelUsed: 'test',
-      status: 'error',
-    }),
-  }))
+  vi.doMock('@hub/agent-runtime', async () => {
+    const actual = (await vi.importActual('@hub/agent-runtime')) as Record<string, unknown>
+    return {
+      ...actual,
+      run: vi.fn().mockResolvedValue({
+        runId: 'run-failed',
+        output: '',
+        modelUsed: 'test',
+        status: 'error',
+      }),
+    }
+  })
   vi.doMock('../outputs.js', () => ({
     handleOutputs,
   }))
@@ -126,9 +134,13 @@ it('records a skipped run when when_expr is falsy', async () => {
 
   const targetId = await seedPromptAndTarget('x > 100')
 
-  vi.doMock('@hub/agent-runtime/run', () => ({
-    run: vi.fn().mockResolvedValue({ runId: 'run-xyz', output: '', modelUsed: 'test' }),
-  }))
+  vi.doMock('@hub/agent-runtime', async () => {
+    const actual = (await vi.importActual('@hub/agent-runtime')) as Record<string, unknown>
+    return {
+      ...actual,
+      run: vi.fn().mockResolvedValue({ runId: 'run-xyz', output: '', modelUsed: 'test' }),
+    }
+  })
   vi.doMock('../outputs.js', () => ({
     handleOutputs: vi.fn().mockResolvedValue(undefined),
   }))
@@ -154,9 +166,13 @@ it('throws when prompt not found', async () => {
   const { migrate } = await import('@hub/db/migrate')
   migrate()
 
-  vi.doMock('@hub/agent-runtime/run', () => ({
-    run: vi.fn(),
-  }))
+  vi.doMock('@hub/agent-runtime', async () => {
+    const actual = (await vi.importActual('@hub/agent-runtime')) as Record<string, unknown>
+    return {
+      ...actual,
+      run: vi.fn(),
+    }
+  })
   vi.doMock('../outputs.js', () => ({
     handleOutputs: vi.fn(),
   }))

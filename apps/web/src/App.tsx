@@ -2,6 +2,7 @@ import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Dashboard } from './pages/Dashboard.js'
 import { Capture } from './pages/Capture.js'
 import { Ask } from './pages/Ask.js'
+import { Govern } from './pages/Govern.js'
 import { Captures } from './pages/Captures.js'
 import { Runs } from './pages/Runs.js'
 import { Brief } from './pages/Brief.js'
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/brief', label: 'Brief' },
   { to: '/context', label: 'Context' },
   { to: '/ask', label: 'Ask' },
+  { to: '/govern', label: 'Govern' },
   { to: '/capture', label: 'Capture' },
   { to: '/captures', label: 'Captures' },
   { to: '/runs', label: 'Runs' },
@@ -94,6 +96,7 @@ export function App() {
           <Route path="/brief" element={<Brief />} />
           <Route path="/context" element={<Context />} />
           <Route path="/ask" element={<Ask />} />
+          <Route path="/govern" element={<Govern />} />
           <Route path="/capture" element={<Capture />} />
           <Route path="/captures" element={<Captures />} />
           <Route path="/runs" element={<Runs />} />

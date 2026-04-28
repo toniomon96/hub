@@ -2,9 +2,30 @@ import { Command } from 'commander'
 import kleur from 'kleur'
 import { run } from '@hub/agent-runtime'
 import { getDb } from '@hub/db'
-import { runs, captures, agentLocks } from '@hub/db/schema'
+import { runs, captures, agentLocks, mcpConsents } from '@hub/db/schema'
 import { sql, desc, and, gte, eq, like } from 'drizzle-orm'
+import { newId } from '@hub/shared'
 import { runDoctor, printDoctorReport } from './doctor.js'
+
+const ASK_MODES = ['clarify', 'govern', 'execute'] as const
+const LIFE_AREAS = [
+  'family',
+  'personal',
+  'health',
+  'planning',
+  'work',
+  'relationships',
+  'business',
+  'ideas',
+  'misc',
+] as const
+const MCP_SCOPES = ['knowledge', 'workspace', 'tasks', 'code', 'system'] as const
+
+function parseRequestedScopes(scopes?: string[]): Array<(typeof MCP_SCOPES)[number]> {
+  return (scopes ?? []).filter((scope): scope is (typeof MCP_SCOPES)[number] =>
+    (MCP_SCOPES as readonly string[]).includes(scope),
+  )
+}
 
 const program = new Command()
   .name('hub')
@@ -36,11 +57,29 @@ program
 
 program
   .command('ask <query...>')
-  .description('One-shot query, auto-routed')
+  .description('Governed one-shot query, auto-routed')
   .option('--local', 'force local SLM (privacy)', false)
   .option('--stream', 'stream tokens as they arrive (stdout)', false)
+  .option('--mode <mode>', 'clarify | govern | execute', 'clarify')
+  .option(
+    '--life-area <area>',
+    'family | personal | health | planning | work | relationships | business | ideas | misc',
+  )
+  .option('--project <ref>', 'project or initiative in focus')
+  .option('--scope <scope...>', 'explicit MCP scope request(s)')
   .action(async (queryParts: string[], opts) => {
     const input = queryParts.join(' ')
+    const requestedScopes = parseRequestedScopes(opts.scope)
+    const { resolveAskPolicy } = await import('@hub/agent-runtime')
+    const policy = await resolveAskPolicy({
+      mode: (ASK_MODES as readonly string[]).includes(opts.mode) ? opts.mode : 'clarify',
+      lifeArea:
+        opts.lifeArea && (LIFE_AREAS as readonly string[]).includes(opts.lifeArea)
+          ? opts.lifeArea
+          : undefined,
+      projectRef: opts.project,
+      requestedScopes,
+    })
     if (opts.stream) {
       const { runStream } = await import('@hub/agent-runtime')
       const ctrl = new AbortController()
@@ -50,13 +89,35 @@ program
       let runId = ''
       try {
         for await (const ev of runStream(
-          { input, source: 'cli', forceLocal: !!opts.local },
-          { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'], signal: ctrl.signal },
+          {
+            input,
+            source: 'cli',
+            forceLocal: !!opts.local,
+            assistantMode: policy.mode,
+            ...(policy.lifeArea ? { lifeAreaHint: policy.lifeArea } : {}),
+            ...(opts.project ? { projectRef: opts.project } : {}),
+            governorDomain: policy.governorDomain,
+          },
+          {
+            agentName: 'ask-oneshot',
+            scopes: policy.appliedScopes,
+            requestedScopes,
+            permissionTier: policy.permissionTier,
+            signal: ctrl.signal,
+          },
         )) {
           if (ev.type === 'meta') {
             modelUsed = ev.modelUsed
             runId = ev.runId
             console.error(kleur.cyan(`run ${runId} → ${modelUsed}`))
+            console.error(
+              kleur.gray(
+                `mode=${policy.mode} authority=${policy.authority} scopes=${policy.appliedScopes.join(',')}`,
+              ),
+            )
+            for (const denied of policy.deniedScopes) {
+              console.error(kleur.yellow(`denied ${denied.scope}: ${denied.reason}`))
+            }
           } else if (ev.type === 'token') {
             process.stdout.write(ev.text)
           } else if (ev.type === 'final') {
@@ -72,8 +133,57 @@ program
       return
     }
     const result = await run(
-      { input, source: 'cli', forceLocal: !!opts.local },
-      { agentName: 'ask-oneshot', scopes: ['knowledge', 'tasks'] },
+      {
+        input,
+        source: 'cli',
+        forceLocal: !!opts.local,
+        assistantMode: policy.mode,
+        ...(policy.lifeArea ? { lifeAreaHint: policy.lifeArea } : {}),
+        ...(opts.project ? { projectRef: opts.project } : {}),
+        governorDomain: policy.governorDomain,
+      },
+      {
+        agentName: 'ask-oneshot',
+        scopes: policy.appliedScopes,
+        requestedScopes,
+        permissionTier: policy.permissionTier,
+      },
+    )
+    console.log(kleur.cyan(`run ${result.runId} → ${result.modelUsed}`))
+    console.log(
+      kleur.gray(
+        `mode=${policy.mode} authority=${policy.authority} scopes=${policy.appliedScopes.join(',')}`,
+      ),
+    )
+    for (const denied of policy.deniedScopes) {
+      console.log(kleur.yellow(`denied ${denied.scope}: ${denied.reason}`))
+    }
+    console.log(result.output)
+  })
+
+program
+  .command('govern [prompt...]')
+  .description('Cross-domain review of what matters now')
+  .option('--local', 'force local SLM (privacy)', false)
+  .option('--life-area <area>', 'focus the review on one life area')
+  .option('--project <ref>', 'project or initiative in focus')
+  .action(async (parts: string[], opts) => {
+    const input =
+      parts.join(' ').trim() ||
+      'What matters now, where are the conflicts between domains, what is at risk, and what should happen next?'
+    const result = await run(
+      {
+        input,
+        source: 'cli',
+        forceLocal: !!opts.local,
+        assistantMode: 'govern',
+        ...(opts.lifeArea && (LIFE_AREAS as readonly string[]).includes(opts.lifeArea)
+          ? { lifeAreaHint: opts.lifeArea }
+          : {}),
+        ...(opts.project ? { projectRef: opts.project } : {}),
+        governorDomain: opts.lifeArea ?? opts.project ?? 'misc',
+      },
+      { agentName: 'govern-review', scopes: ['knowledge'], permissionTier: 'R0' },
     )
     console.log(kleur.cyan(`run ${result.runId} → ${result.modelUsed}`))
     console.log(result.output)
@@ -153,6 +263,54 @@ program
     const text = parts.join(' ')
     const result = await ingest({ source: 'cli', text, rawContentRef: `cli:${Date.now()}` })
     console.log(kleur.cyan(result.isDuplicate ? `dup → ${result.id}` : `captured ${result.id}`))
+  })
+
+program
+  .command('consent-grant <scope>')
+  .description('Grant stored consent for a write-capable ask scope')
+  .option('--hours <n>', 'expiry window in hours', '24')
+  .option('--notes <text>', 'operator note', 'granted via CLI')
+  .action(async (scope: string, opts: { hours: string; notes: string }) => {
+    if (!(MCP_SCOPES as readonly string[]).includes(scope) || scope === 'knowledge') {
+      console.error(kleur.red(`invalid scope: ${scope}`))
+      process.exitCode = 1
+      return
+    }
+    const hours = Number(opts.hours)
+    const expiresAt = Number.isFinite(hours) && hours > 0 ? Date.now() + hours * 3_600_000 : null
+    await getDb()
+      .insert(mcpConsents)
+      .values({
+        id: newId(),
+        serverName: `scope:${scope}`,
+        toolName: null,
+        scope: scope === 'system' ? 'destructive' : 'write',
+        grantedAt: Date.now(),
+        expiresAt,
+        notes: opts.notes,
+      })
+      .run()
+    console.log(
+      kleur.green(
+        `granted consent for ${scope}${expiresAt ? ` until ${new Date(expiresAt).toISOString()}` : ''}`,
+      ),
+    )
+  })
+
+program
+  .command('consent-list')
+  .description('List stored ask-scope consents')
+  .action(async () => {
+    const rows = await getDb().select().from(mcpConsents).orderBy(desc(mcpConsents.grantedAt)).all()
+    if (!rows.length) {
+      console.log(kleur.gray('no stored consents'))
+      return
+    }
+    for (const row of rows) {
+      console.log(
+        `${kleur.cyan(row.serverName.padEnd(18))} ${row.scope.padEnd(12)} granted ${new Date(row.grantedAt).toISOString()}${row.expiresAt ? ` expires ${new Date(row.expiresAt).toISOString()}` : ''}`,
+      )
+    }
   })
 
 // ── hub prompt * ──────────────────────────────────────────────────────────────
