@@ -9,6 +9,8 @@ dist/
 
 # env / secrets
 .env
+
+.claude/settings.local.json
 .env.local
 .env.*.local
 *.pem

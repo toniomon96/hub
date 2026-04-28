@@ -5,22 +5,20 @@ import { run } from '@hub/agent-runtime/run'
 import { startRun, finishRun } from '@hub/agent-runtime/persist'
 import { getLogger } from '@hub/shared'
 import type { Task } from '@hub/shared'
-import { Parser, type Value } from 'expr-eval'
 import { handleOutputs } from './outputs.js'
+import { evaluateWhenExpression } from './when-expr.js'
 
 const log = getLogger('dispatcher')
-const exprParser = new Parser()
 
 /**
- * when_expr evaluator uses expr-eval:
+ * when_expr evaluator uses a local expression parser:
  *   - Supports arithmetic (+, -, *, /, %)
- *   - Logical: and, or, not (expr-eval uses word operators, not &&/||)
+ *   - Logical: and, or, not
  *   - Comparison: ==, !=, <, >, <=, >=
  *   - Member access: payload.field via context variables
  *
- * Security: expr-eval never calls eval() or Function(); it builds an AST
- * and interprets it. Context variables come from trusted operator-authored
- * registry entries, not from external input.
+ * Security: this parser never calls eval() or Function(). Context variables
+ * come from trusted operator-authored registry entries, not arbitrary users.
  */
 
 export type DispatchOpts = {
@@ -90,7 +88,7 @@ export async function dispatchPromptRun(opts: DispatchOpts): Promise<{ runId: st
     }
     let result: unknown
     try {
-      result = exprParser.evaluate(persistentTarget.whenExpr, context as Record<string, Value>)
+      result = evaluateWhenExpression(persistentTarget.whenExpr, context)
     } catch (err) {
       log.warn(
         {

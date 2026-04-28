@@ -217,7 +217,7 @@ export const promptTargets = sqliteTable(
     repo: text('repo').notNull(), // 'owner/repo' slug
     promptId: text('prompt_id').notNull(), // FK → prompts.id (CASCADE enforced in SQL)
     trigger: text('trigger').notNull(), // 'cron:0 5 * * *'|'manual'|'event:push'
-    whenExpr: text('when_expr'), // expr-eval expression; null = always run
+    whenExpr: text('when_expr'), // local when_expr expression; null = always run
     branch: text('branch').notNull().default('main'),
     sensitivityOverride: text('sensitivity_override'), // low|medium|high
     args: text('args').notNull().default('{}'), // JSON

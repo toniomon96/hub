@@ -24,7 +24,7 @@ export async function shallowClone(url: string, branch = 'main'): Promise<CloneR
   const dir = mkdtempSync(join(tmpdir(), 'hub-clone-'))
   log.info({ url: redactUrl(url), branch, dir }, 'shallow clone start')
 
-  const git = simpleGit()
+  const git = simpleGit().env(cleanGitEnv())
   try {
     await git.clone(url, dir, ['--depth', '1', '--branch', branch, '--single-branch'])
   } catch (err) {
@@ -34,7 +34,7 @@ export async function shallowClone(url: string, branch = 'main'): Promise<CloneR
   }
 
   // Get HEAD SHA for source_sha tracking
-  const repoGit = simpleGit(dir)
+  const repoGit = simpleGit(dir).env(cleanGitEnv())
   const sha = (await repoGit.revparse(['HEAD'])).trim()
   log.info({ url: redactUrl(url), sha }, 'shallow clone done')
   return { dir, sha }
@@ -48,4 +48,14 @@ export function buildAuthUrl(repoUrl: string, token: string): string {
 /** Strip token from URL before logging. */
 function redactUrl(url: string): string {
   return url.replace(/oauth2:[^@]+@/, 'oauth2:[REDACTED]@')
+}
+
+export function cleanGitEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env }
+  for (const key of Object.keys(env)) {
+    if (key.startsWith('GIT_')) {
+      delete env[key]
+    }
+  }
+  return env
 }
