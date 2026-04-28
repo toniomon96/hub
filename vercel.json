@@ -13,7 +13,7 @@
   ],
   "rewrites": [
     {
-      "source": "/api/:path((?!(console/|console$|intake$|status$|cron/|cron$|auth/|auth$|webhooks/|webhooks$|health$)).*)",
+      "source": "/api/:path*",
       "destination": "https://hubserver-production-0cd1.up.railway.app/api/:path*"
     },
     {
@@ -28,6 +28,6 @@
       "source": "/health",
       "destination": "/api/health"
     },
-    { "source": "/:path((?!api/).*)", "destination": "/index.html" }
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
