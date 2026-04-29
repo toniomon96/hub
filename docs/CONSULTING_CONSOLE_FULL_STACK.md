@@ -5,8 +5,11 @@ The consulting console is split across three surfaces:
 - `consulting`: public Vercel site and `/start` intake path.
 - `hub`: private Vercel admin console at `/console`.
 - Supabase: live operational store for todos, outreach, and intake submissions.
+- `diagnose-to-plan`: canonical Practice OS roadmap, Client Operating Kits, redaction, COI, hosted DTP direction, and pattern promotion.
 
-`engineering-playbook` remains the markdown source for schemas, roadmap, templates, decisions, and operating doctrine.
+`engineering-playbook` remains the markdown source for portfolio schemas, templates, historical decisions, and general operating doctrine. Practice-wide production sequencing now lives in `diagnose-to-plan/docs/PRACTICE_PRODUCTION_ROADMAP.md`.
+
+Practice-wide sequencing lives in `diagnose-to-plan/docs/PRACTICE_PRODUCTION_ROADMAP.md`. Hub owns runtime intake and operator records; it does not own DTP engagement kits or public proof pages.
 
 ## Supabase
 
@@ -76,6 +79,8 @@ Leave `PUBLIC_FORMSPREE_ENDPOINT` in place during the transition if you want a q
 5. Keep the roadmap gates visible before building new surfaces.
 
 The console can now manage actions. It should still not become a CRM, billing surface, time tracker, client portal, vector search layer, or generalized project cockpit.
+
+It should also not become the DTP cockpit by another name. Hosted DTP, Client Operating Kits, redaction review, COI review, pattern promotion, and case-study packet preparation belong in `diagnose-to-plan`. Hub may link to those surfaces later, but it should keep its own data model focused on runtime support and intake operations.
 
 ## Railway Exit Foundation
 
