@@ -1,0 +1,69 @@
+title = "hub secret scanning"
+
+[[allowlists]]
+description = "Generated dependency, build, cache, and local data artifacts"
+paths = [
+  '''(^|[\\/])node_modules[\\/]''',
+  '''(^|[\\/])dist[\\/]''',
+  '''(^|[\\/])\.turbo[\\/]''',
+  '''(^|[\\/])coverage[\\/]''',
+  '''(^|[\\/])data[\\/]''',
+  '''(^|[\\/])\.env$''',
+  '''(^|[\\/])\.env\.local$''',
+  '''(^|[\\/])\.env\.[^.]+\.local$''',
+]
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API key"
+regex = '''sk-ant-[A-Za-z0-9_-]+'''
+tags = ["key", "anthropic"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS access key"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["key", "aws"]
+
+[[rules]]
+id = "private-key"
+description = "Private key block"
+regex = '''-----BEGIN [A-Z ]*PRIVATE KEY-----'''
+tags = ["key", "private"]
+
+[[rules]]
+id = "github-token"
+description = "GitHub token"
+regex = '''gh[pousr]_[A-Za-z0-9_]{36,255}'''
+tags = ["key", "github"]
+
+[[rules]]
+id = "openai-api-key"
+description = "OpenAI API key"
+regex = '''sk-(proj-[A-Za-z0-9_-]{20,}|[A-Za-z0-9]{20,})'''
+tags = ["key", "openai"]
+
+[[rules]]
+id = "stripe-api-key"
+description = "Stripe API key"
+regex = '''[prsk]k_(live|test)_[A-Za-z0-9]{16,}'''
+tags = ["key", "stripe"]
+
+[[rules]]
+id = "generic-secret-assignment"
+description = "Generic assignment-style secret"
+regex = '''(?i)(?:api[_-]?key|secret|token|password)[ \t]*[:=][ \t]*['"]?([A-Za-z0-9_./+=-]{20,})'''
+secretGroup = 1
+tags = ["key", "generic"]
+
+[[allowlists]]
+description = "Environment variable references are configuration reads, not secret literals"
+regexes = [
+  '''^(env|process\.env|import\.meta\.env)\.[A-Z0-9_]+''',
+]
+
+[[allowlists]]
+description = "Intentional local test cookie secret placeholder"
+regexes = [
+  '''test-cookie-secret-32chars-xxxxxxxxx''',
+]

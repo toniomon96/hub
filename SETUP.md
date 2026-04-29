@@ -49,7 +49,7 @@ Edit `.env` in the repo root. Nothing else needs to change.
 ### 1.1 Anthropic API key
 Get one at [console.anthropic.com](https://console.anthropic.com) → API Keys → Create Key.
 ```
-ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_API_KEY=<your-anthropic-api-key>
 ```
 **Why Hub needs it:** cloud routes (the non-private, non-trivial inputs) go to Claude.
 Without this key, `hub ask` and `hub brief` can't run at all (env validation fails fast).

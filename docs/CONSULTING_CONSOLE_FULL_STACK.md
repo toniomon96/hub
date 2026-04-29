@@ -82,6 +82,43 @@ The console can now manage actions. It should still not become a CRM, billing su
 
 It should also not become the DTP cockpit by another name. Hosted DTP, Client Operating Kits, redaction review, COI review, pattern promotion, and case-study packet preparation belong in `diagnose-to-plan`. Hub may link to those surfaces later, but it should keep its own data model focused on runtime support and intake operations.
 
+## Runtime Verification
+
+Hub participates in the DTP-owned practice verification spine as the runtime support layer. It should produce evidence for intake and console operations without becoming the Practice OS.
+
+Current local gates:
+
+```powershell
+pnpm verify
+pnpm test
+pnpm hub doctor
+```
+
+Hard runtime checks:
+
+- protected console routes reject unauthenticated requests;
+- `/health` returns `ok: true` and reports whether Supabase storage is configured;
+- `/api/intake` accepts allowed consulting origins and rejects malformed submissions;
+- Supabase migrations match the deployed runtime tables;
+- secret values stay in Vercel/Supabase environments and are never printed in logs or docs.
+
+Secret scanning is a hard gate once the local `gitleaks` binary is installed:
+
+```powershell
+pnpm security:secrets
+```
+
+If `gitleaks` is missing, record it as a missing hard-gate tool in the verification evidence artifact. Do not call the secret scan passed.
+
+Manual support gates:
+
+- call the live health route for the deployed Hub domain;
+- confirm the consulting site is using the intended `PUBLIC_CONSULTING_INTAKE_ENDPOINT`;
+- submit one test intake when practical, verify the private Hub row, then delete or archive the test record;
+- verify Vercel deployment and Supabase migration state before treating runtime evidence as release evidence.
+
+Evidence should use the DTP template fields: repo, branch, commit, run time, lane, commands, result, hard failures, advisory failures, manual gates, artifacts, redaction status, reviewer, and next action.
+
 ## Railway Exit Foundation
 
 The Hub Vercel project now owns these hosted routes:

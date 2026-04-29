@@ -18,6 +18,7 @@
     "typecheck:api": "tsc -p tsconfig.api.json",
     "test:api": "vitest run api/_lib/console-store.test.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm build && pnpm typecheck && pnpm test",
+    "security:secrets": "gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose",
     "dev": "pnpm -r --parallel --filter @hub/server --filter @hub/web dev",
     "dev:server": "pnpm --filter @hub/server dev",
     "dev:web": "pnpm --filter @hub/web dev",
