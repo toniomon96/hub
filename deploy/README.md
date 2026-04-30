@@ -46,7 +46,7 @@ Copy `deploy/setup-vps.sh` up and run it as root. It installs Node 20, pnpm, git
 ```bash
 # on laptop
 scp deploy/setup-vps.sh root@<ip>:/root/
-ssh root@<ip> "bash /root/setup-vps.sh https://github.com/toniomon96/hub.git"
+ssh root@<ip> "bash /root/setup-vps.sh https://github.com/Toni-Montez-Consulting/hub.git"
 ```
 
 What the script does not do (you do these by hand, below): populate `.env`, authenticate `cloudflared`, configure `rclone`, push your vault up.

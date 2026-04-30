@@ -3,10 +3,10 @@
 # Run as root. Takes one arg: the git URL of this repo.
 #
 # Usage:
-#   bash setup-vps.sh https://github.com/toniomon96/hub.git
+#   bash setup-vps.sh https://github.com/Toni-Montez-Consulting/hub.git
 set -euo pipefail
 
-REPO_URL="${1:-https://github.com/toniomon96/hub.git}"
+REPO_URL="${1:-https://github.com/Toni-Montez-Consulting/hub.git}"
 HUB_USER="hub"
 HUB_HOME="/var/lib/hub"
 REPO_DIR="${HUB_HOME}/hub"

@@ -80,9 +80,9 @@ Hub is the execution layer. The prompt library and target registry live in separ
 
 | Repo | Role |
 | --- | --- |
-| `toniomon96/hub` | Execution: router, dispatcher, lease table, audit trail, state stores |
-| `toniomon96/hub-prompts` | Prompt library: versioned markdown files with YAML frontmatter |
-| `toniomon96/hub-registry` | Target registry: single `targets.yml` wiring prompts to repos |
+| `Toni-Montez-Consulting/hub` | Execution: router, dispatcher, lease table, audit trail, state stores |
+| `Toni-Montez-Consulting/hub-prompts` | Prompt library: versioned markdown files with YAML frontmatter |
+| `Toni-Montez-Consulting/hub-registry` | Target registry: single `targets.yml` wiring prompts to repos |
 
 Hub points to the companion repos via `HUB_PROMPTS_REPO_URL` and `HUB_REGISTRY_REPO_URL`; auth uses `HUB_GITHUB_TOKEN`. The separation is load-bearing: rebuild the Hub without losing the prompt library or registry; swap git providers without touching the execution engine.
 
@@ -148,7 +148,7 @@ The unaided self can still walk. This is not morbid maintenance — it is the pr
 
 ## Engineering playbook
 
-`toniomon96/engineering-playbook` is the canonical home for cross-project operating principles. Three files are referenced from Hub sessions:
+`Toni-Montez-Consulting/engineering-playbook` is the canonical home for cross-project operating principles. Three files are referenced from Hub sessions:
 
 - `HANDBOOK.md` — Agent-Assisted Engineering handbook: working agreements, review standards, commit discipline
 - `DESIGN_WORKFLOW.md` — Claude Design + Claude Code workflow: from Figma handoff to merged PR
