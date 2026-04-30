@@ -36,7 +36,7 @@ For all prompts with ≥ 5 runs. Status: ✓ healthy / ⚠ watch / ✕ underperf
 ### For each underperforming prompt (acted < 30% over ≥ 10 runs)
 
 1. Write a revised version of the prompt file that addresses the diagnosed issue
-2. Open a GitHub PR to `toniomon96/hub-prompts` with:
+2. Open a GitHub PR to `Toni-Montez-Consulting/hub-prompts` with:
    - Branch: `fix/improve-{promptId}-{YYYY-MM-DD}`
    - Title: `improve: {promptId} — acted rate {X}% over last {N} runs`
    - Body: diagnosis + what changed + why this should improve the signal

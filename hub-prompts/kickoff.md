@@ -5,7 +5,7 @@ sensitivity: low
 complexity: standard
 inputs_schema: '{"repo": "string (owner/repo)", "task": "string"}'
 outputs: []
-verification: "Run with repo=toniomon96/hub task='add X'; confirm it surfaces CLAUDE.md conventions and recent relevant commits."
+verification: "Run with repo=Toni-Montez-Consulting/hub task='add X'; confirm it surfaces CLAUDE.md conventions and recent relevant commits."
 ---
 
 You are preparing a coding session for Toni Montez.

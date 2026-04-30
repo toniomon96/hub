@@ -2,6 +2,9 @@ repo_id: hub
 display_name: 'Hub'
 repo_type: internal-platform
 owner: toni
+github_owner: Toni-Montez-Consulting
+github_repo: hub
+github_url: https://github.com/Toni-Montez-Consulting/hub
 client_id: null
 engagement_id: null
 sensitivity_tier: 2
@@ -23,4 +26,4 @@ source_of_truth_files:
   - package.json
 status: active
 created_at: 2026-04-27
-last_verified_at: 2026-04-27
+last_verified_at: 2026-04-30
