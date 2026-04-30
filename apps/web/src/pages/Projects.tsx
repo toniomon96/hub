@@ -288,7 +288,7 @@ function AddRepoForm({
     e.preventDefault()
     const slug = repo.trim()
     if (!slug || !slug.includes('/')) {
-      setErr('Format must be org/repo (e.g. toniomon96/my-project)')
+      setErr('Format must be org/repo (e.g. Toni-Montez-Consulting/my-project)')
       return
     }
     setAdding(true)
@@ -329,7 +329,7 @@ function AddRepoForm({
               type="text"
               value={repo}
               onChange={(e) => setRepo(e.target.value)}
-              placeholder="org/repo  (e.g. toniomon96/hub)"
+              placeholder="org/repo  (e.g. Toni-Montez-Consulting/hub)"
               className="flex-[2] min-w-0 rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none font-mono"
             />
             <select
