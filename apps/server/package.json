@@ -22,11 +22,10 @@
     "@hub/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.16",
-    "node-cron": "^3.0.3"
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
     "@hub/models": "workspace:*",
-    "@types/node-cron": "^3.0.11",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
