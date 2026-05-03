@@ -134,7 +134,7 @@ export async function ingest(args: IngestArgs): Promise<IngestResult> {
     // and the hub-prompts repo is configured.
     if (
       result.actionItems.length > 0 &&
-      !isQuietHour(env.HUB_QUIET_HOURS) &&
+      !isQuietHour(env.HUB_QUIET_HOURS, { timeZone: env.HUB_TIMEZONE }) &&
       env.HUB_PROMPTS_REPO_URL
     ) {
       // Fire-and-forget — capture storage is never blocked on dispatch.

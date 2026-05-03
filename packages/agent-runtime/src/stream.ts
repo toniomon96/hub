@@ -58,7 +58,10 @@ export async function* runStream(
 ): AsyncGenerator<RunStreamEvent, void, void> {
   const env = loadEnv()
   const tier = opts.permissionTier ?? 'R0'
-  if ((tier === 'R2' || tier === 'R3') && isQuietHour(env.HUB_QUIET_HOURS)) {
+  if (
+    (tier === 'R2' || tier === 'R3') &&
+    isQuietHour(env.HUB_QUIET_HOURS, { timeZone: env.HUB_TIMEZONE })
+  ) {
     const endHour = env.HUB_QUIET_HOURS.split('-')[1] ?? '??'
     const runId = await startRun({
       agentName: opts.agentName,

@@ -56,7 +56,10 @@ export async function run(task: Task, opts: RunOptions): Promise<RunResult> {
 
   // §XII §XIV — Hard quiet-hours gate for R2/R3 actions. Code gate, not a model
   // instruction — cannot be bypassed by editing commandments.md.
-  if ((tier === 'R2' || tier === 'R3') && isQuietHour(env.HUB_QUIET_HOURS)) {
+  if (
+    (tier === 'R2' || tier === 'R3') &&
+    isQuietHour(env.HUB_QUIET_HOURS, { timeZone: env.HUB_TIMEZONE })
+  ) {
     const endHour = env.HUB_QUIET_HOURS.split('-')[1] ?? '??'
     const runId = await startRun({
       agentName: opts.agentName,

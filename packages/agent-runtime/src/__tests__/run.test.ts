@@ -23,7 +23,7 @@ async function setup() {
   process.env['HUB_LOG_LEVEL'] = 'fatal'
   process.env['HUB_SKIP_DOTENV'] = '1'
   process.env['HUB_TIMEZONE'] = 'UTC'
-  process.env['HUB_QUIET_HOURS'] = '00-23'
+  process.env['HUB_QUIET_HOURS'] = '00-24'
   _resetEnvCache()
 
   const { closeDb, migrate } = await import('@hub/db')
