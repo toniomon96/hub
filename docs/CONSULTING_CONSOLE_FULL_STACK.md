@@ -11,6 +11,10 @@ The consulting console is split across three surfaces:
 
 Practice-wide sequencing lives in `diagnose-to-plan/docs/PRACTICE_PRODUCTION_ROADMAP.md`. Hub owns runtime intake and operator records; it does not own DTP engagement kits or public proof pages.
 
+For current route ownership, legacy Railway boundaries, local-only assumptions,
+and expansion gates, read `docs/HUB_RUNTIME_CURRENT_STATE.md` before changing
+Hub runtime behavior.
+
 ## Supabase
 
 Apply this migration first:
