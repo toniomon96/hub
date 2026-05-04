@@ -4,6 +4,9 @@ Personal AI operating layer. TypeScript monorepo on the Claude Agent SDK + MCP.
 
 > Status: **v0.3 scaffold** — MVP foundation in place. See [DECISIONS.md](./DECISIONS.md)
 > for what's decided, [ARCHITECTURE.md](./ARCHITECTURE.md) for how it fits together.
+> Read [docs/HUB_RUNTIME_CURRENT_STATE.md](./docs/HUB_RUNTIME_CURRENT_STATE.md)
+> before expanding Hub, treating runtime evidence as current, or deciding
+> whether a surface is hosted, local-only, legacy-proxy, planned, or retired.
 
 ## Quick start
 
