@@ -1,10 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { _resetEnvCache } from '@hub/shared'
+import { _resetEnvCache, _resetLoggerCache } from '@hub/shared'
 
 let tmpDir: string
+let sharedLogDir: string
+
+beforeAll(() => {
+  sharedLogDir = join(tmpdir(), 'hub-test-logs')
+  mkdirSync(join(sharedLogDir, 'logs'), { recursive: true })
+})
+
+afterAll(() => {
+  _resetLoggerCache()
+})
 
 /**
  * Set HUB_DB_PATH to a fresh tmp file, clear env cache, clear getDb() module
@@ -16,7 +26,7 @@ async function freshDb() {
   tmpDir = mkdtempSync(join(tmpdir(), 'hub-locks-test-'))
   process.env['ANTHROPIC_API_KEY'] = 'test-key'
   process.env['HUB_DB_PATH'] = join(tmpDir, 'hub.db')
-  process.env['HUB_LOG_DIR'] = join(tmpDir, 'logs')
+  process.env['HUB_LOG_DIR'] = join(sharedLogDir, 'logs')
   process.env['HUB_LOG_LEVEL'] = 'error'
   process.env['HUB_SKIP_DOTENV'] = '1'
   _resetEnvCache()
@@ -40,6 +50,7 @@ describe('locks', () => {
   afterEach(async () => {
     const { closeDb } = await import('../client.js')
     closeDb()
+    _resetLoggerCache()
     if (tmpDir) rmSync(tmpDir, { recursive: true, force: true })
   })
 
