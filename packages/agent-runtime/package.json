@@ -18,8 +18,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.123",
-    "@anthropic-ai/sdk": "^0.91.1",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.126",
+    "@anthropic-ai/sdk": "^0.92.0",
     "@hub/db": "workspace:*",
     "@hub/models": "workspace:*",
     "@hub/shared": "workspace:*",
