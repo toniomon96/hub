@@ -158,7 +158,7 @@ describe('runStream (Ollama path)', () => {
   }, 30000)
 
   it('records a blocked R3 streaming run during quiet hours', async () => {
-    process.env['HUB_QUIET_HOURS'] = '00-23'
+    process.env['HUB_QUIET_HOURS'] = '00-24'
     _resetEnvCache()
     const { runStream } = await setup()
     const events: RunStreamEvent[] = []
