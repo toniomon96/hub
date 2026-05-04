@@ -2,20 +2,21 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { _resetEnvCache } from '@hub/shared'
+import { _resetEnvCache, _resetLoggerCache } from '@hub/shared'
 
-// Single persistent log dir for the entire test file — avoids the pino
-// async-open race where createWriteStream fires after afterEach rmSync.
+// Stable log dir for the test process. Do not delete it in afterAll: pino opens
+// file destinations asynchronously, and Vitest 4 reports that delayed open as an
+// unhandled error if the directory disappears during teardown.
 let sharedLogDir: string
 let testDirs: string[] = []
 
 beforeAll(() => {
-  sharedLogDir = mkdtempSync(join(tmpdir(), 'hub-migration-logs-'))
+  sharedLogDir = join(tmpdir(), 'hub-test-logs')
   mkdirSync(join(sharedLogDir, 'logs'), { recursive: true })
 })
 
 afterAll(() => {
-  rmSync(sharedLogDir, { recursive: true, force: true })
+  _resetLoggerCache()
 })
 
 async function freshDb(prefix = 'hub-migration-test-') {
@@ -47,6 +48,7 @@ describe('migration 0001_prompt_orchestration', () => {
   afterEach(async () => {
     const { closeDb } = await import('../client.js')
     closeDb()
+    _resetLoggerCache()
     for (const d of testDirs) rmSync(d, { recursive: true, force: true })
     testDirs = []
   })

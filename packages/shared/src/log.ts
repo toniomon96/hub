@@ -1,5 +1,5 @@
 import pino, { type Logger, type LoggerOptions } from 'pino'
-import { createWriteStream, mkdirSync } from 'node:fs'
+import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadEnv } from './env.js'
 
@@ -26,12 +26,18 @@ const REDACT_PATHS = [
 ]
 
 let rootLogger: Logger | undefined
+let logFileStream: ReturnType<typeof pino.destination> | undefined
 
 function buildRoot(): Logger {
   const env = loadEnv()
   mkdirSync(env.HUB_LOG_DIR, { recursive: true })
   const date = new Date().toISOString().slice(0, 10)
   const logFile = join(env.HUB_LOG_DIR, `${date}.log`)
+  logFileStream = pino.destination({
+    dest: logFile,
+    mkdir: true,
+    sync: process.env['NODE_ENV'] === 'test',
+  })
 
   const opts: LoggerOptions = {
     level: env.HUB_LOG_LEVEL,
@@ -43,7 +49,7 @@ function buildRoot(): Logger {
   return pino(
     opts,
     pino.multistream([
-      { level: env.HUB_LOG_LEVEL, stream: createWriteStream(logFile, { flags: 'a' }) },
+      { level: env.HUB_LOG_LEVEL, stream: logFileStream },
       { level: env.HUB_LOG_LEVEL, stream: process.stderr },
     ]),
   )
@@ -87,6 +93,9 @@ export function getLogger(component?: string): Logger {
 /** Test hook: force the root logger to be rebuilt on next use. */
 export function _resetLoggerCache(): void {
   rootLogger = undefined
+  logFileStream?.flushSync()
+  logFileStream?.end()
+  logFileStream = undefined
 }
 
 /**
