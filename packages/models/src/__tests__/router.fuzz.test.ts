@@ -166,9 +166,9 @@ describe('detectSensitivity fuzz — robustness', () => {
     )
   })
 
-  it('empty patterns ALWAYS return low regardless of input', () => {
+  it('empty custom patterns return low outside the base sensitivity floor', () => {
     fc.assert(
-      fc.property(fc.string({ maxLength: 500 }), (input) => {
+      fc.property(benignInput, (input) => {
         expect(detectSensitivity(input, '')).toBe('low')
         expect(detectSensitivity(input, '   ')).toBe('low')
       }),
