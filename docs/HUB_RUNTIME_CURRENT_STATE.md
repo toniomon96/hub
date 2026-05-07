@@ -8,6 +8,11 @@ Purpose: classify Hub surfaces before adding features, treating runtime evidence
 
 This map is based on repo documentation and static config. Live Vercel, Railway, Supabase, webhook, cron, and auth state still require targeted runtime verification before being used as release evidence.
 
+Practice OS runtime readiness is tracked in
+`docs/PRACTICE_OS_RUNTIME_READINESS.md`. Use it when DTP asks Hub to support the
+Client OS pilot wave, consulting intake, future retrieval, or runtime evidence.
+It does not transfer DTP source-of-truth ownership into Hub.
+
 ## Latest Packaging Check
 
 2026-05-04 local validation passed:
