@@ -9,6 +9,16 @@
 
 ---
 
+## Practice OS Runtime Overlay
+
+The Practice OS strategic backlog uses Hub as runtime support, not practice
+source of truth. See `docs/PRACTICE_OS_RUNTIME_READINESS.md` before expanding
+intake, console, prompt, webhook, retrieval, or hosted runtime behavior for the
+consulting practice.
+
+Keep v0.4 hardening first. Memory retrieval and Hub-as-MCP-server stay later
+until DTP Knowledge Base V1 and privacy/citation gates exist.
+
 ## How to use this doc
 
 - Each milestone has a **goal**, a **PR table**, **acceptance criteria**, and **out of scope**.
