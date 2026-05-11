@@ -8,7 +8,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const rawBody = await request.text()
   const auth = verifyWebhookRequest(source, request.headers, rawBody)
-  if (!auth.ok) return json({ error: auth.reason }, { status: auth.status })
+  if ('reason' in auth) return json({ error: auth.reason }, { status: auth.status })
 
   let payload: Record<string, unknown>
   try {

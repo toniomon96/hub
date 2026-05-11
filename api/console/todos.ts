@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!isSupabaseConfigured()) return supabaseNotConfigured()
 
   const parsed = parseTodoCreateInput(await readRequestObject(request))
-  if (!parsed.ok) return badRequest(parsed.error)
+  if ('error' in parsed) return badRequest(parsed.error)
 
   try {
     return json({ row: await createTodo(parsed.value) }, { status: 201 })
@@ -41,7 +41,7 @@ export async function PATCH(request: Request): Promise<Response> {
   if (!isSupabaseConfigured()) return supabaseNotConfigured()
 
   const parsed = parseTodoPatchInput(await readRequestObject(request))
-  if (!parsed.ok) return badRequest(parsed.error)
+  if ('error' in parsed) return badRequest(parsed.error)
 
   try {
     return json({ row: await updateTodo(parsed.value) })

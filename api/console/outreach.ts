@@ -28,7 +28,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!isSupabaseConfigured()) return supabaseNotConfigured()
 
   const parsed = parseOutreachCreateInput(await readRequestObject(request))
-  if (!parsed.ok) return badRequest(parsed.error)
+  if ('error' in parsed) return badRequest(parsed.error)
 
   try {
     return json({ row: await createOutreachEvent(parsed.value) }, { status: 201 })
@@ -43,7 +43,7 @@ export async function PATCH(request: Request): Promise<Response> {
   if (!isSupabaseConfigured()) return supabaseNotConfigured()
 
   const parsed = parseOutreachPatchInput(await readRequestObject(request))
-  if (!parsed.ok) return badRequest(parsed.error)
+  if ('error' in parsed) return badRequest(parsed.error)
 
   try {
     return json({ row: await updateOutreachEvent(parsed.value) })
