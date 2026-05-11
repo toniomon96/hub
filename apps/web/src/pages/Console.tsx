@@ -4,6 +4,7 @@ import {
   api,
   type ConsoleChecklistItem,
   type ConsoleDashboard as ConsoleDashboardT,
+  type ConsoleIntakeSubmission,
   type ConsoleOutreachRow,
   type ConsoleRepoManifest,
   type ConsoleTodo,
@@ -375,23 +376,7 @@ export function Console() {
           ) : (
             <div className="space-y-2">
               {intake.rows.slice(0, 5).map((submission) => (
-                <div
-                  key={submission.id}
-                  className="rounded-md border border-[var(--console-line)] bg-black/10 px-3 py-2"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-sm text-[var(--console-ink)]">{submission.name}</div>
-                    <span className="rounded bg-[var(--console-panel-strong)] px-2 py-0.5 text-xs text-[var(--console-muted)]">
-                      {submission.status}
-                    </span>
-                  </div>
-                  <div className="mt-1 font-mono text-xs text-[var(--console-muted)]">
-                    {submission.email}
-                  </div>
-                  <p className="mt-2 text-sm leading-5 text-[var(--console-muted)]">
-                    {submission.project}
-                  </p>
-                </div>
+                <IntakeSubmissionRow key={submission.id} submission={submission} />
               ))}
             </div>
           )}
@@ -592,6 +577,51 @@ function OutreachRow({
             </button>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+function IntakeSubmissionRow({ submission }: { submission: ConsoleIntakeSubmission }) {
+  const summaryRows = [
+    ['door', submission.offer_door],
+    ['friction', submission.primary_friction],
+    ['state', submission.current_state],
+    ['success', submission.success_outcome],
+    ['timeline', submission.timeline],
+  ].filter(([, value]) => value)
+
+  return (
+    <div className="rounded-md border border-[var(--console-line)] bg-black/10 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm text-[var(--console-ink)]">{submission.name}</div>
+        <span className="rounded bg-[var(--console-panel-strong)] px-2 py-0.5 text-xs text-[var(--console-muted)]">
+          {submission.status}
+        </span>
+      </div>
+      <div className="mt-1 font-mono text-xs text-[var(--console-muted)]">
+        {submission.email}
+        {submission.phone ? ` / ${submission.phone}` : ''}
+      </div>
+      <p className="mt-2 text-sm leading-5 text-[var(--console-muted)]">
+        {submission.project_goal || submission.project}
+      </p>
+      {summaryRows.length > 0 && (
+        <dl className="mt-2 grid gap-1 rounded-md border border-[var(--console-line)] bg-black/10 p-2">
+          {summaryRows.map(([label, value]) => (
+            <div key={label} className="grid gap-1 sm:grid-cols-[5.5rem_1fr]">
+              <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--console-muted)]">
+                {label}
+              </dt>
+              <dd className="m-0 text-xs leading-5 text-[var(--console-muted)]">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {(submission.call_context || submission.messy_context) && (
+        <p className="mt-2 max-h-16 overflow-hidden text-xs leading-5 text-[var(--console-muted)]">
+          {submission.call_context || submission.messy_context}
+        </p>
       )}
     </div>
   )

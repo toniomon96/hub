@@ -41,8 +41,8 @@ PRs as stale.
 | Surface | Status | Evidence | Owner boundary | Next action |
 |---|---|---|---|---|
 | `/console` private admin console | `live-hosted` | `docs/CONSULTING_CONSOLE_FULL_STACK.md` names private Vercel admin console at `/console` | Hub owns runtime actions, todos, outreach, inbound review | Verify auth and data before treating as release proof |
-| Consulting `/start` intake into `/api/intake` | `live-hosted` | consulting/Hub docs name `PUBLIC_CONSULTING_INTAKE_ENDPOINT` and `/api/intake` | Hub receives runtime intake; DTP decides accepted practice work | Keep Hub primary and Formspree fallback on consulting |
-| Supabase consulting console tables | `live-hosted` | `202604270001_consulting_console_ops.sql` creates `admin_todos`, `outreach_events`, `intake_submissions` | Hub runtime store only | Verify migrations before runtime evidence |
+| Consulting `/start` intake into `/api/intake` | `live-hosted` | consulting/Hub docs name `PUBLIC_CONSULTING_INTAKE_ENDPOINT` and `/api/intake`; Hub accepts structured `practice-start-v1` triage fields plus legacy aliases | Hub receives runtime intake; DTP decides accepted practice work | Keep Hub primary and Formspree fallback on consulting |
+| Supabase consulting console tables | `live-hosted` | `202604270001_consulting_console_ops.sql` creates `admin_todos`, `outreach_events`, `intake_submissions`; `202605080001_consulting_intake_triage_fields.sql` adds structured intake review fields | Hub runtime store only | Verify both consulting migrations before runtime evidence |
 | Supabase Hub cloud runtime tables | `live-hosted` | `202604270002_hub_cloud_runtime_foundation.sql` adds captures, runs, briefings, projects, prompts, targets, locks, cron, webhooks | Hub cloud runtime support | Do not assume embeddings/vector search migrated |
 | `/auth/login` and `/auth/logout` | `live-hosted` | `vercel.json` rewrites `/auth/:path*` to `/api/auth/:path*` | Hub auth boundary | Verify protected console behavior |
 | `/health` | `live-hosted` | `vercel.json` rewrites `/health` to `/api/health` | Health/status only | Use for live health checks, not proof of full runtime |
@@ -116,7 +116,7 @@ Runtime verification when credentials and live scope are explicit:
 - call the live health route;
 - confirm protected console routes reject unauthenticated requests;
 - confirm consulting uses the intended `PUBLIC_CONSULTING_INTAKE_ENDPOINT`;
-- submit one practical test intake, verify the private Hub row, then delete or archive test data;
+- submit one practical structured test intake, verify the private Hub row includes the triage fields, then delete or archive test data;
 - verify Supabase migrations before claiming runtime table readiness;
 - verify Vercel cron and webhook behavior before treating scheduled/capture evidence as current.
 

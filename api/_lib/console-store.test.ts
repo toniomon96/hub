@@ -104,6 +104,65 @@ describe('console Vercel API helpers', () => {
     expect(parsed).toEqual({ ok: false, error: 'Submission rejected.' })
   })
 
+  it('accepts structured consulting triage and derives legacy summaries', () => {
+    const parsed = parseIntakeCreateInput({
+      name: 'Northline Owner',
+      email: 'owner@example.com',
+      phone: '214-555-0101',
+      project_goal: 'An existing process that is messy or too manual.',
+      offer_door: 'Improve The System.',
+      primary_friction: 'Leads, clients, or tasks are falling through cracks.',
+      current_state: 'A live business with manual workflows.',
+      success_outcome: 'Better intake, follow-up, or handoff.',
+      timeline: 'This month.',
+      investment_readiness: 'I am looking for a focused Blueprint or diagnostic first.',
+      call_context: 'Intake and follow-up depend on owner memory.',
+      triage_version: 'practice-start-v1',
+      source: 'tonimontez.co',
+    })
+
+    expect(parsed.ok).toBe(true)
+    if (parsed.ok) {
+      expect(parsed.value).toMatchObject({
+        phone: '214-555-0101',
+        project: 'An existing process that is messy or too manual.',
+        project_goal: 'An existing process that is messy or too manual.',
+        offer_door: 'Improve The System.',
+        primary_friction: 'Leads, clients, or tasks are falling through cracks.',
+        current_state: 'A live business with manual workflows.',
+        success_outcome: 'Better intake, follow-up, or handoff.',
+        timeline: 'This month.',
+        investment_readiness: 'I am looking for a focused Blueprint or diagnostic first.',
+        call_context: 'Intake and follow-up depend on owner memory.',
+        triage_version: 'practice-start-v1',
+      })
+      expect(parsed.value.messy_context).toContain('friction: Leads, clients')
+      expect(parsed.value.thirty_day_target).toContain('success: Better intake')
+      expect(parsed.value.already_tried).toContain('current state: A live business')
+    }
+  })
+
+  it('keeps older consulting form aliases compatible with the intake parser', () => {
+    const parsed = parseIntakeCreateInput({
+      name: 'Legacy Owner',
+      email: 'legacy@example.com',
+      project: 'Website and workflow cleanup',
+      current_challenge: 'Everything lives in texts and spreadsheets.',
+      current_site_or_tool: 'A partial website and a spreadsheet',
+      success_target: 'A cleaner intake and booking path',
+      timeline: 'This month',
+      source: 'tonimontez.co',
+    })
+
+    expect(parsed.ok).toBe(true)
+    if (parsed.ok) {
+      expect(parsed.value.project).toBe('Website and workflow cleanup')
+      expect(parsed.value.messy_context).toContain('Everything lives in texts')
+      expect(parsed.value.thirty_day_target).toContain('A cleaner intake')
+      expect(parsed.value.current_state).toBe('A partial website and a spreadsheet')
+    }
+  })
+
   it('surfaces partial repo manifests instead of dropping the portfolio row', () => {
     const manifest = parseRepoManifest(
       'partial-repo',

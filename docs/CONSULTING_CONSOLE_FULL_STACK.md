@@ -7,8 +7,6 @@ The consulting console is split across three surfaces:
 - Supabase: live operational store for todos, outreach, and intake submissions.
 - `diagnose-to-plan`: canonical Practice OS roadmap, Client Operating Kits, redaction, COI, hosted DTP direction, and pattern promotion.
 
-`engineering-playbook` remains the markdown source for portfolio schemas, templates, historical decisions, and general operating doctrine. Practice-wide production sequencing now lives in `diagnose-to-plan/docs/PRACTICE_PRODUCTION_ROADMAP.md`.
-
 Practice-wide sequencing lives in `diagnose-to-plan/docs/PRACTICE_PRODUCTION_ROADMAP.md`. Hub owns runtime intake and operator records; it does not own DTP engagement kits or public proof pages.
 
 For current route ownership, legacy Railway boundaries, local-only assumptions,
@@ -30,6 +28,14 @@ Required tables:
 - `intake_submissions`
 
 RLS is enabled on all three. The browser does not talk to Supabase directly; Hub Vercel Functions use a server-only Supabase secret/service key.
+
+For the structured consulting `/start` triage contract, also apply:
+
+```sql
+supabase/migrations/202605080001_consulting_intake_triage_fields.sql
+```
+
+That migration keeps the legacy intake summary columns intact and adds structured review fields on `intake_submissions`: `phone`, `project_goal`, `offer_door`, `primary_friction`, `current_state`, `success_outcome`, `timeline`, `investment_readiness`, `call_context`, and `triage_version`.
 
 For the Railway exit foundation, also apply:
 
@@ -79,7 +85,7 @@ Leave `PUBLIC_FORMSPREE_ENDPOINT` in place during the transition if you want a q
 1. Open `/console`.
 2. Add the next concrete business action in `todos`.
 3. Log every referral DM or follow-up in `outreach`.
-4. Watch `/start` submissions appear in `inbound`.
+4. Watch `/start` submissions appear in `inbound` with both legacy summaries and structured triage fields.
 5. Keep the roadmap gates visible before building new surfaces.
 
 The console can now manage actions. It should still not become a CRM, billing surface, time tracker, client portal, vector search layer, or generalized project cockpit.
@@ -102,7 +108,7 @@ Hard runtime checks:
 
 - protected console routes reject unauthenticated requests;
 - `/health` returns `ok: true` and reports whether Supabase storage is configured;
-- `/api/intake` accepts allowed consulting origins and rejects malformed submissions;
+- `/api/intake` accepts allowed consulting origins, stores the structured `practice-start-v1` triage fields, preserves legacy aliases, and rejects malformed submissions;
 - Supabase migrations match the deployed runtime tables;
 - secret values stay in Vercel/Supabase environments and are never printed in logs or docs.
 
@@ -136,7 +142,7 @@ The Hub Vercel project now owns these hosted routes:
 
 Other legacy `/api/*` routes still proxy to Railway until their SQLite, local-filesystem, Ollama, Obsidian, MCP, and shell assumptions are retired or moved behind a local worker.
 
-To seed Supabase from the current local SQLite database after applying both migrations:
+To seed Supabase from the current local SQLite database after applying the required migrations:
 
 ```powershell
 pnpm migrate:hub:supabase
