@@ -350,7 +350,7 @@ export function parseOutreachCreateInput(
   }
 
   const status = parseOutreachStatus(body['status'])
-  if (!status.ok) return status
+  if ('error' in status) return { ok: false, error: status.error }
 
   return {
     ok: true,
@@ -387,7 +387,7 @@ export function parseOutreachPatchInput(
 
   if (body['status'] !== undefined) {
     const status = parseOutreachStatus(body['status'])
-    if (!status.ok) return status
+    if ('error' in status) return { ok: false, error: status.error }
     value.status = status.value
   }
 

@@ -22,7 +22,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const parsed = parseIntakeCreateInput(await readRequestObject(request))
-  if (!parsed.ok) {
+  if ('error' in parsed) {
     return formSubmission
       ? redirectWithState(request, 'error')
       : json({ error: 'bad_request', message: parsed.error }, { status: 400, headers })
