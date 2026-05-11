@@ -197,11 +197,21 @@ export interface ConsoleIntakeSubmission {
   submitted_at: string
   name: string
   email: string
+  phone: string
   project: string
   messy_context: string
   already_tried: string
   thirty_day_target: string
   private_context: string
+  project_goal: string
+  offer_door: string
+  primary_friction: string
+  current_state: string
+  success_outcome: string
+  timeline: string
+  investment_readiness: string
+  call_context: string
+  triage_version: string
   source: string
   status: 'new' | 'reviewed' | 'fit' | 'not_fit' | 'archived'
 }

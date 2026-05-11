@@ -35,11 +35,21 @@ export interface ConsoleIntakeSubmission {
   submitted_at: string
   name: string
   email: string
+  phone: string
   project: string
   messy_context: string
   already_tried: string
   thirty_day_target: string
   private_context: string
+  project_goal: string
+  offer_door: string
+  primary_friction: string
+  current_state: string
+  success_outcome: string
+  timeline: string
+  investment_readiness: string
+  call_context: string
+  triage_version: string
   source: string
   status: IntakeStatus
 }
@@ -89,11 +99,21 @@ export interface OutreachPatchInput {
 export interface IntakeCreateInput {
   name: string
   email: string
+  phone: string
   project: string
   messy_context: string
   already_tried: string
   thirty_day_target: string
   private_context: string
+  project_goal: string
+  offer_door: string
+  primary_friction: string
+  current_state: string
+  success_outcome: string
+  timeline: string
+  investment_readiness: string
+  call_context: string
+  triage_version: string
   source: string
 }
 
@@ -109,6 +129,8 @@ const OUTREACH_STATUSES = new Set<OutreachStatus>([
   'stale',
 ])
 const INTAKE_STATUSES = new Set<IntakeStatus>(['new', 'reviewed', 'fit', 'not_fit', 'archived'])
+const INTAKE_SELECT =
+  'id, submitted_at, name, email, phone, project, messy_context, already_tried, thirty_day_target, private_context, project_goal, offer_door, primary_friction, current_state, success_outcome, timeline, investment_readiness, call_context, triage_version, source, status'
 
 export class ConsoleStoreError extends Error {
   constructor(
@@ -254,9 +276,7 @@ export async function archiveOutreachEvent(id: string): Promise<ConsoleOutreachE
 export async function listIntakeSubmissions(limit = 20): Promise<ConsoleIntakeSubmission[]> {
   const { data, error } = await getSupabaseAdmin()
     .from('intake_submissions')
-    .select(
-      'id, submitted_at, name, email, project, messy_context, already_tried, thirty_day_target, private_context, source, status',
-    )
+    .select(INTAKE_SELECT)
     .order('submitted_at', { ascending: false })
     .limit(limit)
 
@@ -270,9 +290,7 @@ export async function createIntakeSubmission(
   const { data, error } = await getSupabaseAdmin()
     .from('intake_submissions')
     .insert(input)
-    .select(
-      'id, submitted_at, name, email, project, messy_context, already_tried, thirty_day_target, private_context, source, status',
-    )
+    .select(INTAKE_SELECT)
     .single()
 
   if (error) throw mapStoreError(error.message)
@@ -384,14 +402,63 @@ export function parseIntakeCreateInput(
 
   const name = cleanString(body['name'], 160)
   const email = cleanString(body['email'], 240)
-  const project = cleanString(body['project'], 180)
-  const messyContext = cleanString(body['messy_context'], 1400)
-  const thirtyDayTarget = cleanString(body['thirty_day_target'], 1000)
+  const phone = cleanString(body['phone'], 40) ?? ''
+  const projectGoal = firstCleanString(220, body['project_goal'], body['project'])
+  const offerDoor = cleanString(body['offer_door'], 120) ?? ''
+  const primaryFriction =
+    firstCleanString(220, body['primary_friction'], body['current_challenge']) ?? ''
+  const currentState =
+    firstCleanString(
+      220,
+      body['current_state'],
+      body['current_site_or_tool'],
+      body['already_tried'],
+    ) ?? ''
+  const successOutcome =
+    firstCleanString(
+      220,
+      body['success_outcome'],
+      body['success_target'],
+      body['thirty_day_target'],
+    ) ?? ''
+  const timeline = cleanString(body['timeline'], 120) ?? ''
+  const investmentReadiness = cleanString(body['investment_readiness'], 260) ?? ''
+  const callContext =
+    firstCleanString(
+      1400,
+      body['call_context'],
+      body['messy_context'],
+      body['current_challenge'],
+    ) ?? ''
+  const explicitProject = cleanString(body['project'], 180)
+  const project = explicitProject ?? projectGoal
+  const messyContext =
+    cleanString(body['messy_context'], 1400) ??
+    composeIntakeSummary([
+      ['goal', projectGoal],
+      ['door', offerDoor],
+      ['friction', primaryFriction],
+      ['current state', currentState],
+      ['context', callContext],
+    ])
+  const thirtyDayTarget =
+    cleanString(body['thirty_day_target'], 1000) ??
+    composeIntakeSummary([
+      ['success', successOutcome],
+      ['timeline', timeline],
+      ['investment readiness', investmentReadiness],
+    ])
+  const alreadyTried =
+    cleanString(body['already_tried'], 1000) ??
+    composeIntakeSummary([
+      ['current state', currentState],
+      ['existing site/tool', cleanString(body['current_site_or_tool'], 220)],
+    ])
 
   if (!name || !email || !project || !messyContext || !thirtyDayTarget) {
     return {
       ok: false,
-      error: 'Name, email, project, current mess, and 30-day target are required.',
+      error: 'Name, email, project goal, current context, and success outcome are required.',
     }
   }
 
@@ -404,11 +471,21 @@ export function parseIntakeCreateInput(
     value: {
       name,
       email,
+      phone,
       project,
       messy_context: messyContext,
-      already_tried: cleanString(body['already_tried'], 1000) ?? '',
+      already_tried: alreadyTried,
       thirty_day_target: thirtyDayTarget,
       private_context: cleanString(body['private_context'], 1000) ?? '',
+      project_goal: projectGoal ?? '',
+      offer_door: offerDoor,
+      primary_friction: primaryFriction,
+      current_state: currentState,
+      success_outcome: successOutcome,
+      timeline,
+      investment_readiness: investmentReadiness,
+      call_context: callContext,
+      triage_version: cleanString(body['triage_version'], 80) ?? '',
       source: cleanString(body['source'], 80) ?? 'tonimontez.co',
     },
   }
@@ -480,11 +557,21 @@ function toIntakeSubmission(row: Record<string, unknown>): ConsoleIntakeSubmissi
     submitted_at: stringField(row, 'submitted_at'),
     name: stringField(row, 'name'),
     email: stringField(row, 'email'),
+    phone: nullableStringField(row, 'phone') ?? '',
     project: stringField(row, 'project'),
     messy_context: stringField(row, 'messy_context'),
     already_tried: nullableStringField(row, 'already_tried') ?? '',
     thirty_day_target: stringField(row, 'thirty_day_target'),
     private_context: nullableStringField(row, 'private_context') ?? '',
+    project_goal: nullableStringField(row, 'project_goal') ?? '',
+    offer_door: nullableStringField(row, 'offer_door') ?? '',
+    primary_friction: nullableStringField(row, 'primary_friction') ?? '',
+    current_state: nullableStringField(row, 'current_state') ?? '',
+    success_outcome: nullableStringField(row, 'success_outcome') ?? '',
+    timeline: nullableStringField(row, 'timeline') ?? '',
+    investment_readiness: nullableStringField(row, 'investment_readiness') ?? '',
+    call_context: nullableStringField(row, 'call_context') ?? '',
+    triage_version: nullableStringField(row, 'triage_version') ?? '',
     source: stringField(row, 'source') || 'tonimontez.co',
     status: INTAKE_STATUSES.has(status as IntakeStatus) ? (status as IntakeStatus) : 'new',
   }
@@ -495,6 +582,22 @@ function cleanString(value: unknown, max: number): string | null {
   const clean = value.replace(/\s+/g, ' ').trim()
   if (!clean) return null
   return clean.slice(0, max)
+}
+
+function firstCleanString(max: number, ...values: unknown[]): string | null {
+  for (const value of values) {
+    const clean = cleanString(value, max)
+    if (clean) return clean
+  }
+  return null
+}
+
+function composeIntakeSummary(parts: Array<[label: string, value: string | null]>): string {
+  return parts
+    .filter((part): part is [string, string] => Boolean(part[1]))
+    .map(([label, value]) => `${label}: ${value}`)
+    .join(' | ')
+    .slice(0, 1400)
 }
 
 function cleanDate(value: unknown): string | null {
