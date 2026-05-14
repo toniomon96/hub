@@ -15,16 +15,13 @@ It does not transfer DTP source-of-truth ownership into Hub.
 
 ## Latest Packaging Check
 
-2026-05-04 local validation passed:
+2026-05-14 local validation passed:
 
 - `pnpm verify`
-- `pnpm test`
-- `pnpm hub doctor`
-- `git diff --check`
 
-Open GitHub PRs observed during packaging: `#64`, `#65`, `#66`, `#67`, and
-`#68`, all Dependabot dependency PRs. Treat older memory saying Hub has no open
-PRs as stale.
+Open GitHub PRs observed during dependency cleanup assessment: `#77` and `#78`,
+both Dependabot dependency PRs. PR `#68` is closed and superseded by
+`docs/HUB_DEPENDENCY_CLEANUP_ASSESSMENT_2026-05-14.md`.
 
 ## Status Vocabulary
 

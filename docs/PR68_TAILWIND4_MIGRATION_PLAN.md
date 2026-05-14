@@ -1,6 +1,8 @@
 # Hub PR #68 Tailwind 4 Migration Plan
 
-Status: targeted dependency blocker plan.
+Status: superseded by `docs/HUB_DEPENDENCY_CLEANUP_ASSESSMENT_2026-05-14.md`.
+PR #68 is closed; keep this file only as historical context for the Tailwind 4
+migration risk.
 
 Owner repo: `hub`
 
@@ -9,9 +11,10 @@ or deliberately replaced by a smaller, safer PR.
 
 ## Current Reading
 
-The workspace roadmap treats PR #68 as the active visible Hub dependency
-blocker. GitHub may mark the PR mergeable, but the roadmapped blocker is that
-typecheck and build-test checks fail. Do not merge on mergeability alone.
+The workspace roadmap previously treated PR #68 as the active visible Hub
+dependency blocker. As of May 14, 2026, PR #68 is closed. The current open
+dependency cleanup assessment is in
+`docs/HUB_DEPENDENCY_CLEANUP_ASSESSMENT_2026-05-14.md`.
 
 ## Migration Path
 
@@ -49,4 +52,3 @@ reason in the PR notes before merging.
 - No prompt/registry changes.
 - No Supabase schema or environment changes.
 - No live intake submission from this dependency plan.
-
