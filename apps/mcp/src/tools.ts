@@ -81,7 +81,7 @@ export function buildHubMcpServer(): McpServer {
       promptId: z.string().min(1),
       repo: z.string().min(1),
       branch: z.string().optional(),
-      args: z.record(z.unknown()).optional(),
+      args: z.record(z.string(), z.unknown()).optional(),
     },
     async ({ promptId, repo, branch, args }) => {
       try {
@@ -216,7 +216,7 @@ Use dryRun:true to preview. Example: { repo: "org/my-repo", promptId: "daily-rev
       promptId: z.string().min(1),
       trigger: z.string().min(1),
       when: z.string().optional(),
-      args: z.record(z.unknown()).optional(),
+      args: z.record(z.string(), z.unknown()).optional(),
       enabled: z.boolean().optional(),
       dryRun: z.boolean().optional(),
     },

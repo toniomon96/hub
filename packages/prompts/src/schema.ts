@@ -13,8 +13,8 @@ export const PromptFrontmatter = z.object({
   description: z.string(),
   sensitivity: z.enum(['low', 'medium', 'high']),
   complexity: z.enum(['trivial', 'standard', 'complex']),
-  inputs_schema: z.record(z.unknown()).optional(),
-  output_config: z.record(z.unknown()),
+  inputs_schema: z.record(z.string(), z.unknown()).optional(),
+  output_config: z.record(z.string(), z.unknown()),
   tags: z.array(z.string()).optional(),
 })
 export type PromptFrontmatter = z.infer<typeof PromptFrontmatter>
@@ -26,7 +26,7 @@ export const TargetEntry = z.object({
   when_expr: z.string().optional(),
   branch: z.string().default('main'),
   sensitivity_override: z.enum(['low', 'medium', 'high']).optional(),
-  args: z.record(z.unknown()).optional(),
+  args: z.record(z.string(), z.unknown()).optional(),
   enabled: z.boolean().default(true),
 })
 export type TargetEntry = z.infer<typeof TargetEntry>
