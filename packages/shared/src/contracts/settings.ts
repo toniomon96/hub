@@ -17,7 +17,7 @@ export const Settings = z
     }),
     dailyUsdCap: z.number(),
     ollamaUrl: z.string(),
-    integrations: z.record(z.boolean()),
+    integrations: z.record(z.string(), z.boolean()),
   })
   .openapi('Settings')
 export type Settings = z.infer<typeof Settings>

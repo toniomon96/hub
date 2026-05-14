@@ -22,7 +22,8 @@
     "@hub/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.18",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@hub/models": "workspace:*",

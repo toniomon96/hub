@@ -104,13 +104,13 @@ importers:
         version: link:../../packages/shared
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
-        version: 1.29.0(zod@3.25.76)
+        version: 1.29.0(zod@4.4.3)
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@libsql/client@0.17.2)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(gel@2.2.0)
       zod:
-        specifier: ^3.24.1
-        version: 3.25.76
+        specifier: ^4.2.1
+        version: 4.4.3
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -132,7 +132,7 @@ importers:
         version: 1.19.14(hono@4.12.18)
       '@hono/zod-openapi':
         specifier: ^1.4.0
-        version: 1.4.0(hono@4.12.18)(zod@3.25.76)
+        version: 1.4.0(hono@4.12.18)(zod@4.4.3)
       '@hub/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
@@ -157,6 +157,9 @@ importers:
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
+      zod:
+        specifier: ^4.2.1
+        version: 4.4.3
     devDependencies:
       '@hub/models':
         specifier: workspace:*
@@ -218,10 +221,10 @@ importers:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.2.138
-        version: 0.2.138(zod@3.25.76)
+        version: 0.2.138(zod@4.4.3)
       '@anthropic-ai/sdk':
         specifier: ^0.95.1
-        version: 0.95.1(zod@3.25.76)
+        version: 0.95.1(zod@4.4.3)
       '@hub/db':
         specifier: workspace:*
         version: link:../db
@@ -263,8 +266,8 @@ importers:
         specifier: ^0.45.2
         version: 0.45.2(@libsql/client@0.17.2)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.9.0)(gel@2.2.0)
       zod:
-        specifier: ^3.24.1
-        version: 3.25.76
+        specifier: ^4.2.1
+        version: 4.4.3
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -305,7 +308,7 @@ importers:
         version: link:../shared
       openai:
         specifier: ^6.37.0
-        version: 6.37.0(ws@8.20.1)(zod@3.25.76)
+        version: 6.37.0(ws@8.20.1)(zod@4.4.3)
     devDependencies:
       fast-check:
         specifier: ^4.7.0
@@ -350,8 +353,8 @@ importers:
         specifier: ^2.8.4
         version: 2.8.4
       zod:
-        specifier: ^3.24.1
-        version: 3.25.76
+        specifier: ^4.2.1
+        version: 4.4.3
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -367,7 +370,7 @@ importers:
     dependencies:
       '@asteasolutions/zod-to-openapi':
         specifier: ^8.5.0
-        version: 8.5.0(zod@3.25.76)
+        version: 8.5.0(zod@4.4.3)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -378,8 +381,8 @@ importers:
         specifier: ^2.4.0
         version: 2.4.0
       zod:
-        specifier: ^3.24.1
-        version: 3.25.76
+        specifier: ^4.2.1
+        version: 4.4.3
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -3397,8 +3400,8 @@ packages:
     peerDependencies:
       zod: ^3.25.28 || ^4
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
 
@@ -3428,11 +3431,11 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.2.138':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk@0.2.138(zod@3.25.76)':
+  '@anthropic-ai/claude-agent-sdk@0.2.138(zod@4.4.3)':
     dependencies:
-      '@anthropic-ai/sdk': 0.91.1(zod@3.25.76)
-      '@modelcontextprotocol/sdk': 1.29.0(zod@3.25.76)
-      zod: 3.25.76
+      '@anthropic-ai/sdk': 0.91.1(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
+      zod: 4.4.3
     optionalDependencies:
       '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.2.138
       '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.2.138
@@ -3446,23 +3449,23 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@anthropic-ai/sdk@0.91.1(zod@3.25.76)':
+  '@anthropic-ai/sdk@0.91.1(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.4.3
 
-  '@anthropic-ai/sdk@0.95.1(zod@3.25.76)':
+  '@anthropic-ai/sdk@0.95.1(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.0.0
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.4.3
 
-  '@asteasolutions/zod-to-openapi@8.5.0(zod@3.25.76)':
+  '@asteasolutions/zod-to-openapi@8.5.0(zod@4.4.3)':
     dependencies:
       openapi3-ts: 4.5.0
-      zod: 3.25.76
+      zod: 4.4.3
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -3802,18 +3805,18 @@ snapshots:
     dependencies:
       hono: 4.12.18
 
-  '@hono/zod-openapi@1.4.0(hono@4.12.18)(zod@3.25.76)':
+  '@hono/zod-openapi@1.4.0(hono@4.12.18)(zod@4.4.3)':
     dependencies:
-      '@asteasolutions/zod-to-openapi': 8.5.0(zod@3.25.76)
-      '@hono/zod-validator': 0.8.0(hono@4.12.18)(zod@3.25.76)
+      '@asteasolutions/zod-to-openapi': 8.5.0(zod@4.4.3)
+      '@hono/zod-validator': 0.8.0(hono@4.12.18)(zod@4.4.3)
       hono: 4.12.18
       openapi3-ts: 4.5.0
-      zod: 3.25.76
+      zod: 4.4.3
 
-  '@hono/zod-validator@0.8.0(hono@4.12.18)(zod@3.25.76)':
+  '@hono/zod-validator@0.8.0(hono@4.12.18)(zod@4.4.3)':
     dependencies:
       hono: 4.12.18
-      zod: 3.25.76
+      zod: 4.4.3
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -3924,7 +3927,7 @@ snapshots:
   '@libsql/win32-x64-msvc@0.5.29':
     optional: true
 
-  '@modelcontextprotocol/sdk@1.29.0(zod@3.25.76)':
+  '@modelcontextprotocol/sdk@1.29.0(zod@4.4.3)':
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.14)
       ajv: 8.18.0
@@ -3941,8 +3944,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 3.25.76
-      zod-to-json-schema: 3.25.2(zod@3.25.76)
+      zod: 4.4.3
+      zod-to-json-schema: 3.25.2(zod@4.4.3)
     transitivePeerDependencies:
       - supports-color
 
@@ -5417,10 +5420,10 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  openai@6.37.0(ws@8.20.1)(zod@3.25.76):
+  openai@6.37.0(ws@8.20.1)(zod@4.4.3):
     optionalDependencies:
       ws: 8.20.1
-      zod: 3.25.76
+      zod: 4.4.3
 
   openapi3-ts@4.5.0:
     dependencies:
@@ -6274,8 +6277,8 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod-to-json-schema@3.25.2(zod@3.25.76):
+  zod-to-json-schema@3.25.2(zod@4.4.3):
     dependencies:
-      zod: 3.25.76
+      zod: 4.4.3
 
-  zod@3.25.76: {}
+  zod@4.4.3: {}
