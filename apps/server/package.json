@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "@hono/zod-openapi": "^0.18.3",
+    "@hono/zod-openapi": "^1.4.0",
     "@hub/agent-runtime": "workspace:*",
     "@hub/capture": "workspace:*",
     "@hub/db": "workspace:*",
